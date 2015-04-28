@@ -1,21 +1,37 @@
-#include <iostream>
-#include <string>
-#include <clang-c/Index.h>
+#include <iostream>        // for I/O
+#include <tuple>           // for parseArgs return type
+#include <regex>           // for parseArgs regex matching
+#include <stdexcept>       // for ArgumentError
+#include <clang-c/Index.h> // for clang parsing
 
-bool isFileExt(std::string s, std::string ext) {
-  if (s.size() > ext.size()) {
-    bool fails(true);
-    for (size_t i = 0; i < ext.size(); ++i) {
-      fails = s[s.size() - i - 1] == ext[ext.size() - i - 1] and fails;
-    }
-    fails = '.' == s[s.size() - ext.size() - 1] and fails;
-    return fails;
+class ArgumentError : public std::runtime_error {
+ public:
+  ArgumentError(std::string str) : std::runtime_error(str) {
+  }
+};
+
+std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv) {
+  if (1 >= argc) {
+    throw ArgumentError("No arguments passed to program!");
   } else {
-    return false;
+    std::regex allowedFileTypes("\\.(c|cpp|h|(c|h)xx|cc|C)$");
+    std::string infile((std::string(argv[1])));
+    if (std::regex_search(infile, allowedFileTypes)) {
+      char ** ret_argv(nullptr);
+      int ret_argc(0);
+      if (2 < argc) {
+        ret_argv = argv + 2;
+        ret_argc = argc - 2;
+      }
+      return std::tuple<const char *, char **, int>(argv[1], ret_argv,
+                                                    ret_argc);
+    } else {
+      throw ArgumentError("Input filetype of " + infile + " not recognized!");
+    }
   }
 }
 
-std::string getClangFileName(const CXFile &file) {
+std::string getClangFileName(const CXFile & file) {
   std::string filename;
   CXString cxfilename = clang_getFileName(file);
   if (clang_getCString(cxfilename) != 0)
@@ -32,7 +48,7 @@ void printLocation(CXSourceLocation location) {
             << getClangFileName(file);
 }
 
-void printExtent(CXSourceRange range, CXTranslationUnit *tup) {
+void printExtent(CXSourceRange range, CXTranslationUnit * tup) {
   /*
     std::cout << "Extent begin at location [";
     printLocation(clang_getRangeStart(range));
@@ -41,10 +57,10 @@ void printExtent(CXSourceRange range, CXTranslationUnit *tup) {
     printLocation(clang_getRangeEnd(range));
     std::cout << "]. \n";
   */
-  CXToken *tokens = 0;
+  CXToken * tokens = 0;
   unsigned int nTokens = 0;
   clang_tokenize(*tup, range, &tokens, &nTokens);
-  for (int i = 0; i < nTokens; ++i) {
+  for (size_t i = 0; i < nTokens; ++i) {
     CXString cxtoken = clang_getTokenSpelling(*tup, tokens[i]);
     std::cout << clang_getCString(cxtoken) << " ";
     clang_disposeString(cxtoken);
@@ -52,11 +68,13 @@ void printExtent(CXSourceRange range, CXTranslationUnit *tup) {
   clang_disposeTokens(*tup, tokens, nTokens);
 }
 
-enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
+// TODO: *do* use the parent attribute to determine nesting!
+enum CXChildVisitResult visit(CXCursor cursor,
+                              CXCursor parent __attribute__((unused)),
                               CXClientData client_data) {
   CXString cxcursor = clang_getCursorSpelling(cursor);
   CXString cxcursorKind =
-      clang_getCursorKindSpelling(clang_getCursorKind(cursor));
+   clang_getCursorKindSpelling(clang_getCursorKind(cursor));
   std::cout << "Cursor name is \"" << clang_getCString(cxcursor) << "\", "
             << "type is (" << clang_getCString(cxcursorKind) << "). ";
   clang_disposeString(cxcursorKind);
@@ -75,19 +93,19 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
   return CXChildVisit_Recurse;
 }
 
-int a = 3;
-
-int main(int argc, char **argv) {
-  if (argc == 1 or (not isFileExt(std::string(argv[1]), "cpp") and
-                    not isFileExt(std::string(argv[1]), "c"))) {
-    std::cerr << "Gimme a C/C++ file to parse!" << std::endl;
+int main(int argc, char ** argv) {
+  const char * infile;
+  char ** clangArgs;
+  int numArgs;
+  try {
+    std::tie(infile, clangArgs, numArgs) = parseArgs(argc, argv);
+  } catch (ArgumentError & e) {
+    std::cerr << e.what() << std::endl;
+    exit(1);
   }
-  // change second arg to 1 for diagnostics
+  // change second arg to 1 to get diagnostics
   CXIndex index(clang_createIndex(0, 0));
-  const char *args[] = {"-std=c++11", "-I/usr/include", "-I.",
-                        "-I/usr/lib/clang/3.6.0/include"};
-  int numArgs = sizeof(args) / sizeof(*args);
   CXTranslationUnit tu = clang_parseTranslationUnit(
-      index, argv[1], args, numArgs, nullptr, 0, CXTranslationUnit_None);
+   index, infile, clangArgs, numArgs, nullptr, 0, CXTranslationUnit_None);
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, &tu);
 }
