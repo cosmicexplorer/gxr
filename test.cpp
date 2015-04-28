@@ -91,7 +91,7 @@ std::string getFile(CXSourceLocation location) {
 //   }
 //   clang_disposeTokens(*tup, tokens, nTokens);
 //   return out.str();
-}
+// }
 
 // TODO: *do* use the parent attribute to determine nesting!
 enum CXChildVisitResult visit(CXCursor cursor,
