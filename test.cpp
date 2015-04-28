@@ -17,7 +17,6 @@ std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv);
 // clang visitor functions
 std::string getClangFileName(const CXFile & file);
 std::string getFile(CXSourceLocation location);
-// std::string getExtent(CXSourceRange range, CXTranslationUnit * tup);
 enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data);
 
@@ -38,7 +37,7 @@ int main(int argc, char ** argv) {
   CXIndex index(clang_createIndex(0, 0));
   CXTranslationUnit tu = clang_parseTranslationUnit(
    index, infile, clangArgs, numArgs, nullptr, 0, CXTranslationUnit_None);
-  clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, &tu);
+  clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
 }
 
 std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv) {
@@ -79,20 +78,6 @@ std::string getFile(CXSourceLocation location) {
   return getClangFileName(file);
 }
 
-// std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
-//   CXToken * tokens = 0;
-//   unsigned int nTokens = 0;
-//   clang_tokenize(*tup, range, &tokens, &nTokens);
-//   std::stringstream out;
-//   for (size_t i = 0; i < nTokens; ++i) {
-//     CXString cxtoken = clang_getTokenSpelling(*tup, tokens[i]);
-//     out << clang_getCString(cxtoken) << " ";
-//     clang_disposeString(cxtoken);
-//   }
-//   clang_disposeTokens(*tup, tokens, nTokens);
-//   return out.str();
-// }
-
 // TODO: *do* use the parent attribute to determine nesting!
 enum CXChildVisitResult visit(CXCursor cursor,
                               CXCursor parent __attribute__((unused)),
@@ -104,15 +89,8 @@ enum CXChildVisitResult visit(CXCursor cursor,
     CXString cxcursor = clang_getCursorSpelling(cursor);
     CXString cxcursorKind =
      clang_getCursorKindSpelling(clang_getCursorKind(cursor));
-    std::cout
-     << "name: " << clang_getCString(cxcursor) << ", "
-     << "type: " << clang_getCString(cxcursorKind) << ", "
-     << "file: " << fromFile
-     // << ". "
-     // << "||" << getExtent(clang_getCursorExtent(cursor),
-     //                      static_cast<CXTranslationUnit *>(client_data)) <<
-     //                      "||"
-     << std::endl;
+    std::cout << "name: " << clang_getCString(cxcursor) << ", "
+              << "type: " << clang_getCString(cxcursorKind) << std::endl;
     clang_disposeString(cxcursorKind);
     clang_disposeString(cxcursor);
   }
