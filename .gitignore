@@ -3,3 +3,4 @@ test
 file
 out-file
 out-obj-file
+*.fasl

@@ -1,6 +1,6 @@
 ;;; slurp in-stream real fast
 
-(defmacro check-types (checker-fun exception objs)
+(defmacro check-types (checker-fun exception &rest objs)
   (cons 'progn
         (mapcar
          (lambda (obj)
@@ -9,13 +9,12 @@
          objs)))
 
 (defun check-output (in-file out-file out-obj-file)
-  (check-types #'stringp 'invalid-file-name (in-file out-file out-obj-file))
+  (check-types #'stringp 'invalid-file-name in-file out-file out-obj-file)
   (let ((in-stream (open in-file :direction :input))
         (out-stream (open out-file
                           :direction :output
                           :if-exists :overwrite
-                          :if-does-not-exist :create
-                          ))
+                          :if-does-not-exist :create))
         (out-obj-stream (open out-obj-file
                               :direction :output
                               :if-exists :supersede

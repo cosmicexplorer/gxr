@@ -1,4 +1,5 @@
 // https://gist.github.com/yifu/3761845
+// http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/
 
 // c++ includes
 #include <iostream>  // for I/O
