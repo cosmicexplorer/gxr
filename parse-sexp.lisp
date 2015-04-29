@@ -1,3 +1,7 @@
+;;; TODO: begin putting out html/js! all we need to do is find where each
+;;; syntactic element maps to in the source, and only for the objects within the
+;;; currently active file (which are small compared to every include ever)
+
 (defmacro check-types (checker-fun exception &rest objs)
   (cons
    'progn
@@ -11,7 +15,6 @@
   ((text :initarg :text :reader text)))
 
 ;;; get instream into a string, then spit it out into an object
-;;; TODO: read stdin and allow streaming! (file-length) doesn't work on stdin
 (defun read-output-into-obj-then-dump (instream outstream)
   (check-types #'streamp 'invalid-file-name instream outstream)
   (write-sequence
