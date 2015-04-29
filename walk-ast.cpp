@@ -1,5 +1,5 @@
+// this is all wrenched from
 // https://gist.github.com/yifu/3761845
-// http://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang/
 
 // c++ includes
 #include <iostream>  // for I/O
@@ -10,7 +10,8 @@
 // libclang includes
 #include <clang-c/Index.h> // for clang parsing
 
-// utility function used in
+// utility function used in closing delimiters on output
+// i literally don't remember how i came up with this
 inline size_t CLOSE_DELIMS(size_t num_pops) {
   return 2 * num_pops - 1;
 }
@@ -35,17 +36,19 @@ std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv);
 
 // clang visitor functions
 std::string getClangFileName(const CXFile & file);
-std::string getFile(CXSourceLocation location);
-std::string getExtent(CXSourceRange range, CXTranslationUnit * tup);
 std::string getDiagInfos(CXDiagnostic diag);
 std::string getFixIts(CXDiagnostic diag);
 enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data);
 
+// globals
 // name of file we're currently parsing
 std::string infile_str;
+// stack we use to traverse the tree
 std::stack<CXCursor> ast_stack;
+// base translation unit for the file we're compilingx
 CXTranslationUnit * infile_ast;
+// used in traversal
 CXCursor prev_cursor;
 CXCursor prev_parent;
 
@@ -74,7 +77,6 @@ int main(int argc, char ** argv) {
     std::cerr << getDiagInfos(diag) << std::endl;
     std::cerr << getFixIts(diag) << std::endl;
   }
-  // TODO: figure out whether or not diagnostics showed errors; if so, quit
   prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
   ast_stack.push(prev_cursor);
   infile_ast = &tu;
@@ -223,6 +225,7 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
   return std::tuple<TreeMotion, size_t>(retval, numPops);
 }
 
+// dumps out each element of the tree
 enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
