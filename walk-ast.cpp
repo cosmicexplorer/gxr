@@ -9,9 +9,8 @@
 #include <stdexcept> // for ArgumentError
 // libclang includes
 #include <clang-c/Index.h> // for clang parsing
-// local includes
-#include "Stack.h"
 
+// utility function used in
 inline size_t CLOSE_DELIMS(size_t num_pops) {
   return 2 * num_pops - 1;
 }
@@ -46,7 +45,6 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
 // name of file we're currently parsing
 std::string infile_str;
 std::stack<CXCursor> ast_stack;
-// SCB::Stack<CXCursor> ast_stack;
 CXTranslationUnit * infile_ast;
 CXCursor prev_cursor;
 CXCursor prev_parent;
@@ -181,18 +179,6 @@ bool cursorEquals(CXCursor a, CXCursor b) {
 
 std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
                                                    CXCursor current) {
-  // #ifdef DEBUG
-  // std::stack<CXCursor> s(ast_stack);
-  // std::cout << std::endl;
-  // while (not s.empty()) {
-  //   std::cout << s.top().data[0] << ",";
-  //   s.pop();
-  // }
-  // std::cout << std::endl;
-  // std::cout << "parent: " << parent.data[0] << "|" << parent.data[1] << "|"
-  //           << parent.data[2] << ", child: " << current.data[0] << "|"
-  //           << current.data[1] << "|" << current.data[2] << std::endl;
-  // #endif
   TreeMotion retval;
   size_t numPops = 0;
   if (cursorEquals(prev_cursor, parent)) {
@@ -207,6 +193,16 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
   } else {
     // size_t len = ast_stack.size();
     // std::cerr << len << std::endl;
+    /*
+      this causes a segfault when parsing the hello.cpp test file; for some
+      reason, "len" is always 5, but when using gdb to query ast_stack.size(),
+      ast_stack.empty(), or even using "print", it always shows the stack as
+      having zero elements. I would put it down to some multithreaded bug, but
+      even when using a mutex, it stays. I think there are some real memory
+      safety issues with using this library, and I'm not sure what (I had a
+      std::stack segfault earlier in testing for unrelated reasons). This line
+      is the reason we'll be sticking to C for now.
+    */
     if (ast_stack.empty()) {
       throw std::logic_error("should never have 0, even when popping many "
                              "times! we counted wrong.");
@@ -231,70 +227,40 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
   std::string fromFile = getFile(clang_getCursorLocation(cursor));
-  // #ifdef DEBUG
-  // if (fromFile == infile_str) {
-  // #else
-  if (true) {
-    // #endif
-    TreeMotion typeOfMotion;
-    size_t numPops;
-    std::tie(typeOfMotion, numPops) = getTypeOfTreeMotion(parent, cursor);
-    CXString cxcursor = clang_getCursorSpelling(cursor);
-    CXString cxcursorKind =
-     clang_getCursorKindSpelling(clang_getCursorKind(cursor));
-    if (TreeMotion::Child == typeOfMotion) {
-      std::cout << " :children" << std::endl;
-      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-        std::cout << " ";
-      }
-      std::cout << "((";
-    } else if (TreeMotion::Sibling == typeOfMotion) {
-      std::cout << ")" << std::endl;
-      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-        std::cout << " ";
-      }
-      std::cout << "(";
-    } else if (TreeMotion::HigherSibling == typeOfMotion) {
-      for (size_t i = 0; i < CLOSE_DELIMS(numPops); ++i) {
-        std::cout << ")";
-      }
-      std::cout << std::endl;
-      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-        std::cout << " ";
-      }
-      std::cout << "(";
+  TreeMotion typeOfMotion;
+  size_t numPops;
+  std::tie(typeOfMotion, numPops) = getTypeOfTreeMotion(parent, cursor);
+  CXString cxcursor = clang_getCursorSpelling(cursor);
+  CXString cxcursorKind =
+   clang_getCursorKindSpelling(clang_getCursorKind(cursor));
+  if (TreeMotion::Child == typeOfMotion) {
+    std::cout << " :children" << std::endl;
+    for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+      std::cout << " ";
     }
-    // #ifdef DEBUG
-    // switch (typeOfMotion) {
-    // case TreeMotion::Child:
-    //   std::cout << "Descent: " << numPops << " pops!" << std::endl;
-    //   break;
-    // case TreeMotion::Sibling:
-    //   std::cout << "Sidestep: " << numPops << " pop!" << std::endl;
-    //   break;
-    // case TreeMotion::HigherSibling:
-    // default:
-    //   std::cout << "Over and out: " << numPops << " pops!" << std::endl;
-    //   break;
-    // }
-    // #endif
-    std::cout << ":name "
-              << "\"" << clang_getCString(cxcursor) << "\""
-              << " :type "
-              << "'" << clang_getCString(cxcursorKind) << " :file "
-              << "\"" << fromFile << "\""
-              << " :text \""
-              << getExtent(clang_getCursorExtent(cursor), infile_ast) << "\"";
-    // std::cout
-    //  << "name: \"" << clang_getCString(cxcursor) << "\""
-    //  << ", type: " << clang_getCString(cxcursorKind) << ", file: " <<
-    //  fromFile
-    //  << ", text: \"" << getExtent(clang_getCursorExtent(cursor), infile_ast)
-    //  << "\""
-    //  << ", location: " << getLocation(clang_getCursorLocation(cursor))
-    //  << std::endl;
-    // clang_disposeString(cxcursorKind);
-    // clang_disposeString(cxcursor);
+    std::cout << "((";
+  } else if (TreeMotion::Sibling == typeOfMotion) {
+    std::cout << ")" << std::endl;
+    for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+      std::cout << " ";
+    }
+    std::cout << "(";
+  } else if (TreeMotion::HigherSibling == typeOfMotion) {
+    for (size_t i = 0; i < CLOSE_DELIMS(numPops); ++i) {
+      std::cout << ")";
+    }
+    std::cout << std::endl;
+    for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+      std::cout << " ";
+    }
+    std::cout << "(";
   }
+  std::cout << ":name "
+            << "\"" << clang_getCString(cxcursor) << "\""
+            << " :type "
+            << "'" << clang_getCString(cxcursorKind) << " :file "
+            << "\"" << fromFile << "\""
+            << " :text \""
+            << getExtent(clang_getCursorExtent(cursor), infile_ast) << "\"";
   return CXChildVisit_Recurse;
 }
