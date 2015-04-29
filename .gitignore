@@ -1,1 +1,5 @@
 test
+*.o
+file
+out-file
+out-obj-file
