@@ -21,17 +21,7 @@
    (write-to-string
     (let ((*readtable* (copy-readtable nil)))
       (setf (readtable-case *readtable*) :preserve)
-      (read-from-string
-       (with-output-to-string (stringstream)
-         (let ((block-size 1024))
-           (loop with block = (make-array block-size
-                                          :element-type 'character
-                                          :adjustable t
-                                          :fill-pointer block-size)
-              while (not (zerop (fill-pointer block)))
-              do (progn
-                   (setf (fill-pointer block) (read-sequence block instream))
-                   (write-sequence block stringstream))))))))
+      (read instream)))
    outstream))
 
 (defun main ()

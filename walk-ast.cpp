@@ -80,8 +80,7 @@ int main(int argc, char ** argv) {
   prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
   ast_stack.push(prev_cursor);
   infile_ast = &tu;
-  std::cout << "'("
-            << "root";
+  std::cout << "(";
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
