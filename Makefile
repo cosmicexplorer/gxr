@@ -49,11 +49,11 @@ check: $(TEST_OBJ_C) $(TEST_OBJ_CXX)
 
 check-c: $(TEST_C) all
 	./$(DRIVER) $< -x c -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) - 2>&1 | head -n20
+	./$(LISP_DRIVER) - 2>&1 | tee ${TEST_DIR}/outfile-c | head -n20
 
 # this test is still broken due to random segfaults
 # i thinks it's just because c++ is a bigger language and libclang is an iffy
 # library
 check-cpp: $(TEST_CXX) all
 	./$(DRIVER) $< -x c++ -std=c++11 -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) - 2>&1 | head -n20
+	./$(LISP_DRIVER) - 2>&1 | tee $(TEST_DIR)/outfile-cpp | head -n20

@@ -52,6 +52,7 @@ CXTranslationUnit * infile_ast;
 CXCursor prev_cursor;
 CXCursor prev_parent;
 
+// TODO: preprocessor stuff?? clang may have this utility as well
 int main(int argc, char ** argv) {
   const char * infile;
   char ** clangArgs;

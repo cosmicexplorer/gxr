@@ -1,11 +1,13 @@
 #include <stdio.h>
 
+#define A 3
+
 int b;
 int a;
 
 int _a() {
   int _b;
-  _b = 3;
+  _b = A;
   return _b;
 }
 
