@@ -1,4 +1,4 @@
-.PHONY: all clean check-c check-cpp check
+.PHONY: all clean check-c check-cpp check-coffee check
 
 CXX := clang++
 LISP := sbcl
@@ -10,6 +10,12 @@ COMPILE_LISP := $(LISP) --noinform --non-interactive \
 	--load ./sbcl-compile.lisp --eval "(local-compile)" \
 	--quit
 
+COMPP_DIR := compp
+COMPP_MAIN := $(COMPP_DIR)/lib/compp
+COFFEE_MAIN := $(COMPP_MAIN)/compp.js
+COFFEE_BIN_DIR := $(shell cd $(COMPP_DIR) && npm bin)
+COFFEE_CC := $(COFFEE_BIN_DIR)/coffee
+
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
 LFLAGS := -lclang
 
@@ -19,8 +25,9 @@ LISP_OBJ := parse-sexp.fasl
 
 DRIVER := walk-ast
 LISP_DRIVER := parse-sexp
+COFFEE_DRIVER := get-defines.js
 
-all: $(DRIVER) $(LISP_DRIVER)
+all: $(DRIVER) $(LISP_DRIVER) $(COFFEE_DRIVER)
 
 %.o: %.cpp $(DEPS)
 	$(CXX) -c $< $(CXXFLAGS)
@@ -34,6 +41,16 @@ $(DRIVER): $(OBJ) $(LISP_OBJ)
 ${LISP_DRIVER}: $(LISP_OBJ)
 	$(COMPILE_LISP) -c $<
 
+$(COMPP_MAIN):
+	git submodule init
+	git submodule update
+
+$(COFFEE_MAIN): $(COMPP_MAIN)
+	make -C $(COMPP_DIR)
+
+%.js: %.coffee $(COFFEE_MAIN)
+	$(COFFEE_CC) -o . -bc $<
+
 clean:
 	@rm -f $(DRIVER)
 	@rm -f $(LISP_DRIVER)
@@ -43,17 +60,24 @@ clean:
 
 TEST_DIR := test
 TEST_C := $(TEST_DIR)/hello.c
+TEST_C_OBJ := $(TEST_DIR)/outfile-c
 TEST_CXX := $(TEST_DIR)/hello.cpp
+TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 
-check: $(TEST_OBJ_C) $(TEST_OBJ_CXX)
+check: check-c check-cpp
 
-check-c: $(TEST_C) all
+check-coffee: $(COFFEE_DRIVER) all
+	node $< $(TEST_C)
+
+$(TEST_C_OBJ): $(TEST_C) all
 	./$(DRIVER) $< -x c -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) - 2>&1 | tee ${TEST_DIR}/outfile-c | head -n20
+	./$(LISP_DRIVER) /dev/null - 2>&1 | tee $(TEST_C_OBJ) | head -n20
+check-c: $(TEST_C_OBJ)
 
 # this test is still broken due to random segfaults
 # i thinks it's just because c++ is a bigger language and libclang is an iffy
 # library
-check-cpp: $(TEST_CXX) all
+$(TEST_CXX_OBJ): $(TEST_CXX) all
 	./$(DRIVER) $< -x c++ -std=c++11 -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) - 2>&1 | tee $(TEST_DIR)/outfile-cpp | head -n20
+	./$(LISP_DRIVER) /dev/null - 2>&1 | tee $(TEST_CXX_OBJ) | head -n20
+check-cpp: $(TEST_CXX_OBJ)

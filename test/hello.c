@@ -1,6 +1,10 @@
-#include <stdio.h>
+/* #include <stdio.h> */
+
+int A = 4;
 
 #define A 3
+
+#define F(x, y) x##y
 
 int b;
 int a;
@@ -14,10 +18,12 @@ int _a() {
 int main();
 
 int main() {
-  int * aptr = NULL;
+  int * F(a, ptr) = NULL;
   aptr = &a;
-  *aptr = 2;
+  *aptr = A;
   printf("%d\n", a);
 }
 
-int c = 3;
+#undef A
+
+int c = A;
