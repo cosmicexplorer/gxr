@@ -22,7 +22,8 @@ LLVM_FLAGS := $(shell llvm-config --cxxflags)
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
 # keep looking for libs to add until it links!
 LLVMLDFLAGS := -lclangFrontend -lclangSema -lclangDriver -lLLVMSupport \
-	-lLLVMOption
+	-lLLVMOption $(shell llvm-config --ldflags --libs) -pthread -ldl -lz \
+	-lncurses
 
 LDFLAGS := -lclang
 
