@@ -20,20 +20,9 @@ COMPILE_LISP := $(LISP) --noinform --non-interactive \
 
 LLVM_FLAGS := $(shell llvm-config --cxxflags)
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
-LLVMLDFLAGS := $(shell llvm-config --libs core) $(shell llvm-config --ldflags) \
-	-pthread \
-	-L/usr/local/lib \
-	-lclangFrontend \
-	-lclangParse \
-	-lclangSema \
-	-lclangAnalysis \
-	-lclangAST \
-	-lclangLex \
-	-lclangBasic \
-	-lclangDriver \
-	-lclangSerialization \
-	-lLLVMMC \
-	-lLLVMSupport
+# keep looking for libs to add until it links!
+LLVMLDFLAGS := -lclangFrontend -lclangSema -lclangDriver -lLLVMSupport \
+	-lLLVMOption
 
 LDFLAGS := -lclang
 

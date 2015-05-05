@@ -1,6 +1,8 @@
 // http://www.ibm.com/developerworks/library/os-createcompilerllvm2/
 #include <iostream>
 
+#include <llvm/Option/Arg.h>
+#include <llvm/Option/ArgList.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Lex/Preprocessor.h>
 
