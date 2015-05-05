@@ -1,46 +1,75 @@
 .PHONY: all clean check-c check-cpp check
 
-CXX := clang++
+CLANG_CXX := clang++
+GCC_CXX := g++
+CXX := $(shell if hash $(CLANG_CXX) 2>/dev/null; then echo $(CLANG_CXX); else \
+	if hash $(GCC_CXX) 2>/dev/null; then echo $(GCC_CXX); else echo oops; \
+	fi; fi)
+ifeq ($(CXX), oops)
+$(error no suitable compiler found! install $(CLANG_CXX) or $(GCC_CXX))
+endif
+
 LISP := sbcl
 
-# takes a path to sbcl $(LISP) and loads sbcl-compile.lisp which has the
-# top-level form (local-compile). the allowable succeeding arguments are
-# detailed in sbcl-compile.sh
+# takes a path to $(LISP) and loads sbcl-compile.lisp which has the top-level
+# form (local-compile). the allowable succeeding arguments are detailed in
+# sbcl-compile.sh
 COMPILE_LISP := $(LISP) --noinform --non-interactive \
 	--load ./sbcl-compile.lisp --eval "(local-compile)" \
 	--quit
 
-COMPP_DIR := compp
-COMPP_MAIN := $(COMPP_DIR)/lib/compp
-
+LLVM_FLAGS := $(shell llvm-config --cxxflags)
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
-LFLAGS := -lclang
+LLVMLDFLAGS := $(shell llvm-config --libs core) $(shell llvm-config --ldflags) \
+	-pthread \
+	-L/usr/local/lib \
+	-lclangFrontend \
+	-lclangParse \
+	-lclangSema \
+	-lclangAnalysis \
+	-lclangAST \
+	-lclangLex \
+	-lclangBasic \
+	-lclangDriver \
+	-lclangSerialization \
+	-lLLVMMC \
+	-lLLVMSupport
 
-DEPS := Stack.h
-OBJ := walk-ast.o
+LDFLAGS := -lclang
+
+DEPS :=
+AST_OBJ := walk-ast.o
+PREPROC_OBJ := pull-preprocessor-directives.o
 LISP_OBJ := parse-sexp.fasl
 
-DRIVER := walk-ast
+AST_DRIVER := walk-ast
+PREPROC_DRIVER := pull-preprocessor-directives
 LISP_DRIVER := parse-sexp
 
-all: $(DRIVER) $(LISP_DRIVER) $(COFFEE_DRIVER)
+all: $(AST_DRIVER) $(LISP_DRIVER) $(PREPROC_DRIVER)
 
-%.o: %.cpp $(DEPS)
+walk-ast.o: walk-ast.cpp $(DEPS)
 	$(CXX) -c $< $(CXXFLAGS)
+
+pull-preprocessor-directives.o: pull-preprocessor-directives.cpp $(DEPS)
+	$(CXX) -c $< $(CXXFLAGS) $(LLVM_FLAGS)
 
 %.fasl: %.lisp
 	$(COMPILE_LISP) -f $<
 
-$(DRIVER): $(OBJ) $(LISP_OBJ)
-	$(CXX) $(OBJ) -o $@ $(LFLAGS)
+$(AST_DRIVER): $(AST_OBJ)
+	$(CXX) $(AST_OBJ) -o $@ $(LDFLAGS)
+
+$(PREPROC_DRIVER): $(PREPROC_OBJ)
+	$(CXX) $(PREPROC_OBJ) -o $@ $(LDFLAGS) $(LLVMLDFLAGS)
 
 ${LISP_DRIVER}: $(LISP_OBJ)
 	$(COMPILE_LISP) -c $<
 
 clean:
-	@rm -f $(DRIVER)
+	@rm -f $(AST_DRIVER)
 	@rm -f $(LISP_DRIVER)
-	@rm -f $(OBJ)
+	@rm -f $(AST_OBJ)
 	@rm -f $(LISP_OBJ)
 	@rm -f $(wildcard *.fasl) # pick up random compilations
 
@@ -53,14 +82,15 @@ TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 check: check-c check-cpp
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(DRIVER) $< -x c -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) /dev/null - 2>&1 | tee $(TEST_C_OBJ) | head -n20
+	./$(AST_DRIVER) $< 0  -x c -I/usr/lib/clang/3.6.0/include | \
+	./$(LISP_DRIVER) /dev/null - $(TEST_C_OBJ)
 check-c: $(TEST_C_OBJ)
 
 # this test is still broken due to random segfaults
 # i thinks it's just because c++ is a bigger language and libclang is an iffy
 # library
 $(TEST_CXX_OBJ): $(TEST_CXX) all
-	./$(DRIVER) $< -x c++ -std=c++11 -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) /dev/null - 2>&1 | tee $(TEST_CXX_OBJ) | head -n20
+	./$(AST_DRIVER) $< 0 -x c++ -std=c++11 \
+	-I/usr/lib/clang/3.6.0/include | \
+	./$(LISP_DRIVER) /dev/null - $(TEST_CXX_OBJ)
 check-cpp: $(TEST_CXX_OBJ)

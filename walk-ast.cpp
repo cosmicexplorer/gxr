@@ -11,7 +11,8 @@
 #include <clang-c/Index.h> // for clang parsing
 
 // utility function used in closing delimiters on output
-// i literally don't remember how i came up with this
+// i literally don't remember how i came up with this but it works according to
+// the parenthesis counts (and lisp doesn't choke on it so that's cool)
 inline size_t CLOSE_DELIMS(size_t num_pops) {
   return 2 * num_pops - 1;
 }
@@ -44,6 +45,7 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
 // globals
 // name of file we're currently parsing
 std::string infile_str;
+bool do_parse_other_files(true);
 // stack we use to traverse the tree
 std::stack<CXCursor> ast_stack;
 // base translation unit for the file we're compilingx
@@ -62,6 +64,9 @@ int main(int argc, char ** argv) {
     infile_str = std::string(infile);
   } catch (ArgumentError & e) {
     std::cerr << e.what() << std::endl;
+    std::cerr << "Usage: walk-ast INFILE SAME-FILE [ARGS...]" << std::endl
+              << "Specify 0 for SAME-FILE to parse only the given source "
+                 "file, or 1 to parse all includes as well." << std::endl;
     exit(1);
   }
   // change second arg to 1 to get diagnostics
@@ -123,17 +128,22 @@ std::string getFixIts(CXDiagnostic diag) {
 }
 
 std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv) {
-  if (1 >= argc) {
+  if (2 >= argc) {
     throw ArgumentError("No arguments passed to program!");
+  } else if (3 == argc or
+             not std::regex_match(std::string(argv[2]), std::regex("[01]"))) {
+    throw ArgumentError("Specify 1 for SAME-FILE to parse all includes, or "
+                        "0 to parse only the given source file.");
   } else {
     std::regex allowedFileTypes("\\.(c|cpp|h|(c|h)xx|cc|C)$");
     std::string infile((std::string(argv[1])));
     if (std::regex_search(infile, allowedFileTypes)) {
       char ** ret_argv(nullptr);
       int ret_argc(0);
-      if (2 < argc) {
-        ret_argv = argv + 2;
-        ret_argc = argc - 2;
+      do_parse_other_files = std::string(argv[2]) == std::string("0");
+      if (3 < argc) {
+        ret_argv = argv + 3;
+        ret_argc = argc - 3;
       }
       return std::tuple<const char *, char **, int>(argv[1], ret_argv,
                                                     ret_argc);
@@ -230,40 +240,42 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
   std::string fromFile = getFile(clang_getCursorLocation(cursor));
-  TreeMotion typeOfMotion;
-  size_t numPops;
-  std::tie(typeOfMotion, numPops) = getTypeOfTreeMotion(parent, cursor);
-  CXString cxcursor = clang_getCursorSpelling(cursor);
-  CXString cxcursorKind =
-   clang_getCursorKindSpelling(clang_getCursorKind(cursor));
-  if (TreeMotion::Child == typeOfMotion) {
-    std::cout << " :children" << std::endl;
-    for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-      std::cout << " ";
+  if (do_parse_other_files or fromFile == infile_str) {
+    TreeMotion typeOfMotion;
+    size_t numPops;
+    std::tie(typeOfMotion, numPops) = getTypeOfTreeMotion(parent, cursor);
+    CXString cxcursor = clang_getCursorSpelling(cursor);
+    CXString cxcursorKind =
+     clang_getCursorKindSpelling(clang_getCursorKind(cursor));
+    if (TreeMotion::Child == typeOfMotion) {
+      std::cout << " :children" << std::endl;
+      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+        std::cout << " ";
+      }
+      std::cout << "((";
+    } else if (TreeMotion::Sibling == typeOfMotion) {
+      std::cout << ")" << std::endl;
+      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+        std::cout << " ";
+      }
+      std::cout << "(";
+    } else if (TreeMotion::HigherSibling == typeOfMotion) {
+      for (size_t i = 0; i < CLOSE_DELIMS(numPops); ++i) {
+        std::cout << ")";
+      }
+      std::cout << std::endl;
+      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+        std::cout << " ";
+      }
+      std::cout << "(";
     }
-    std::cout << "((";
-  } else if (TreeMotion::Sibling == typeOfMotion) {
-    std::cout << ")" << std::endl;
-    for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-      std::cout << " ";
-    }
-    std::cout << "(";
-  } else if (TreeMotion::HigherSibling == typeOfMotion) {
-    for (size_t i = 0; i < CLOSE_DELIMS(numPops); ++i) {
-      std::cout << ")";
-    }
-    std::cout << std::endl;
-    for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-      std::cout << " ";
-    }
-    std::cout << "(";
+    std::cout << ":name "
+              << "\"" << clang_getCString(cxcursor) << "\""
+              << " :type "
+              << "'" << clang_getCString(cxcursorKind) << " :file "
+              << "\"" << fromFile << "\""
+              << " :text \""
+              << getExtent(clang_getCursorExtent(cursor), infile_ast) << "\"";
   }
-  std::cout << ":name "
-            << "\"" << clang_getCString(cxcursor) << "\""
-            << " :type "
-            << "'" << clang_getCString(cxcursorKind) << " :file "
-            << "\"" << fromFile << "\""
-            << " :text \""
-            << getExtent(clang_getCursorExtent(cursor), infile_ast) << "\"";
   return CXChildVisit_Recurse;
 }

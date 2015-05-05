@@ -1,6 +1,6 @@
-/* #include <stdio.h> */
+#include <stdio.h>
 
-int A = 4;
+static int A = 4;
 
 #define A 3
 
@@ -21,9 +21,7 @@ int main() {
   int * F(a, ptr) = NULL;
   aptr = &a;
   *aptr = A;
+#undef A
+  int c = A;
   printf("%d\n", a);
 }
-
-#undef A
-
-int c = A;
