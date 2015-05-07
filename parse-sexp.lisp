@@ -2,34 +2,6 @@
 ;;; syntactic element maps to in the source, and only for the objects within the
 ;;; currently active file (which are small compared to every include ever)
 
-(defun read-large-object-without-error-checking (instream &optional block-size)
-  "An iterative approach to lisp's (read) command which avoids recursion at the
-cost of useful error checking. Reads from INSTREAM in blocks of size BLOCK-SIZE,
-or 1024 if BLOCK-SIZE is not given."
-  (let* ((array-len (if block-size block-size default-block-size))
-         (seq (make-array array-len :element-type 'character :adjustable t
-                          :fill-pointer array-len)))
-    (setf (fill-pointer seq) (read-sequence seq instream))
-    (loop with leftover-str = ""
-       with state-list = nil and root-stack = nil
-       while (not (zerop (fill-pointer seq)))
-       do (destructuring-bind (obj rest-of-str ret-state-list)
-              (parse-large-read-obj
-               (concatenate 'string leftover-str seq)
-               state-list root-stack)
-            (setq leftover-str rest-of-str
-                  state-list ret-state-list
-                  root-stack obj))
-       finally (return (destructuring-bind (obj rest-of-str ret-state-list)
-                           (parse-large-read-obj
-                            leftover-str state-list root-stack)
-                         (if (or (> (length rest-of-str) 0)
-                                 (> (length obj) 1)
-                                 (> (length rest-of-str) 0))
-                             (error 'invalid-parse
-                                    :text (list obj rest-of-str ret-state-list))
-                             obj))))))
-
 (defmacro check-types (checker-fun exception &rest objs)
   (cons
    'progn
