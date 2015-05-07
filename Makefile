@@ -21,7 +21,7 @@ COMPILE_LISP := $(LISP) --noinform --non-interactive \
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-DEPS :=
+DEPS := Stack.h
 AST_OBJ := walk-ast.o
 LISP_OBJ := parse-sexp.fasl
 

@@ -10,6 +10,8 @@
 #include <assert.h>
 // libclang includes
 #include <clang-c/Index.h> // for clang parsing
+// local includes
+#include "Stack.h"
 
 // utility function used in closing delimiters on output
 // i literally don't remember how i came up with this but it works according to
@@ -48,7 +50,8 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
 std::string infile_str;
 bool do_parse_other_files(true);
 // stack we use to traverse the tree
-std::stack<CXCursor> ast_stack;
+// std::stack<CXCursor> ast_stack;
+SCB::Stack<CXCursor> ast_stack;
 // base translation unit for the file we're compilingx
 CXTranslationUnit * infile_ast;
 // used in traversal
@@ -215,9 +218,13 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
       std::stack segfault earlier in testing for unrelated reasons). This line
       is the reason we'll be sticking to C for now.
     */
-    assert(!ast_stack.empty() && "STACK IS BORKED");
-    while (not cursorEquals(parent, ast_stack.top())) {
-      assert(!ast_stack.empty() && "STACK IS BORKED");
+    assert(!ast_stack.empty());
+    // a sneaky compiler optimization (that occurs even at -O0! with either gcc
+    // or clang!) makes the assertion succeed but the line below it fail. moving
+    // this into a separate variable avoids this.
+    CXCursor cur_top(ast_stack.top());
+    while (not cursorEquals(parent, cur_top)) {
+      assert(!ast_stack.empty());
       ast_stack.pop();
       ++numPops;
     }
