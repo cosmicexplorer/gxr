@@ -1,17 +1,13 @@
-// this is all wrenched from
-// https://gist.github.com/yifu/3761845
+// heavily inspired by https://gist.github.com/yifu/3761845
 
-// c++ includes
+// standard lib includes
 #include <iostream>  // for I/O
 #include <tuple>     // for parseArgs return type
 #include <sstream>   // for string manipulation in getFile
 #include <regex>     // for parseArgs regex matching
 #include <stdexcept> // for ArgumentError
-#include <list>      // for std::list to debug failure
 // libclang includes
 #include <clang-c/Index.h> // for clang parsing
-// local includes
-#include "Stack.h"
 
 // utility function used in closing delimiters on output
 // i literally don't remember how i came up with this but it works according to
@@ -51,14 +47,12 @@ std::string infile_str;
 bool do_parse_other_files(true);
 // stack we use to traverse the tree
 std::stack<CXCursor> ast_stack;
-// SCB::Stack<CXCursor> ast_stack;
 // base translation unit for the file we're compilingx
 CXTranslationUnit * infile_ast;
 // used in traversal
 CXCursor prev_cursor;
 CXCursor prev_parent;
 
-// TODO: preprocessor stuff?? clang may have this utility as well
 int main(int argc, char ** argv) {
   const char * infile;
   char ** clangArgs;
@@ -71,7 +65,6 @@ int main(int argc, char ** argv) {
     std::cerr << "Usage: walk-ast INFILE SAME-FILE [ARGS...]" << std::endl;
     exit(1);
   }
-  // change second arg to 1 to get diagnostics
   CXIndex index(clang_createIndex(0, 0));
   CXTranslationUnit tu =
    clang_parseTranslationUnit(index, infile, clangArgs, numArgs, nullptr, 0,
@@ -193,9 +186,7 @@ std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
 }
 
 bool cursorEquals(CXCursor a, CXCursor b) {
-  return (a.data[1] == b.data[1] and
-          // a.data[0] == b.data[0] and
-          a.data[2] == b.data[2]);
+  return (a.data[1] == b.data[1] and a.data[2] == b.data[2]);
 }
 
 std::string getCursorPointers(CXCursor cursor) {
@@ -212,64 +203,19 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
     retval = TreeMotion::Child;
   } else if (cursorEquals(prev_parent, parent)) {
     retval = TreeMotion::Sibling;
-    if (ast_stack.empty()) {
-      std::cerr << "stack is empty at TreeMotion::Sibling!" << std::endl;
-    } else {
-      ast_stack.pop();
-      ++numPops;
-    }
+    ast_stack.pop();
+    ++numPops;
   } else {
     std::list<std::string> cursorResults;
-    if (ast_stack.empty()) {
-      goto error;
-    }
-    // assert(!ast_stack.empty());
-    // a sneaky compiler optimization (that occurs even at -O0! with either gcc
-    // or clang!) makes the assertion succeed but the line below it fail. moving
-    // this into a separate variable avoids this.
-    // CXCursor cur_top(ast_stack.top());
     while (not cursorEquals(parent, ast_stack.top())) {
-      cursorResults.emplace_front(getCursorPointers(ast_stack.top()));
       ast_stack.pop();
       ++numPops;
-      // assert(!ast_stack.empty());
-      // cur_top = ast_stack.top();
-      if (ast_stack.empty()) {
-        goto error;
-      }
     }
-    goto success;
-  error:
-    for (auto & res : cursorResults) {
-      std::cerr << "top: " << res << std::endl;
-    }
-    std::cerr << "parent: " << getCursorPointers(parent)
-              << "; child: " << getCursorPointers(current) << std::endl;
-    std::cerr << "stack is empty at TreeMotion::HigherSibling!" << std::endl;
-  success:
     retval = TreeMotion::HigherSibling;
   }
   ast_stack.push(current);
   prev_cursor = current;
   prev_parent = parent;
-  std::string retstr;
-  switch (retval) {
-  case TreeMotion::HigherSibling:
-    retstr = "HigherSibling";
-    break;
-  case TreeMotion::Sibling:
-    retstr = "Sibling";
-    break;
-  case TreeMotion::Child:
-    retstr = "Child";
-    break;
-  default:
-    throw 1;
-  }
-  // std::cout << std::endl
-  //           << getCursorPointers(parent) << " : " <<
-  //           getCursorPointers(current)
-  //           << " : " << retstr << std::endl;
   return std::tuple<TreeMotion, size_t>(retval, numPops);
 }
 
