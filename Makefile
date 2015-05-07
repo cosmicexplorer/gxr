@@ -58,15 +58,14 @@ TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 check: check-c check-cpp
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< 1 -x c -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) /dev/null - $(TEST_C_OBJ)
+	./$(AST_DRIVER) $< 1 -I/usr/lib/clang/3.6.0/include | \
+	./$(LISP_DRIVER) - $(TEST_C_OBJ)
 check-c: $(TEST_C_OBJ)
 
 # this test is still broken due to random segfaults
 # i think it's just because c++ is a bigger language and libclang is an iffy
 # library
 $(TEST_CXX_OBJ): $(TEST_CXX) all
-	./$(AST_DRIVER) $< 1 -x c++ -std=c++11 \
-	-I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) /dev/null - $(TEST_CXX_OBJ)
+	./$(AST_DRIVER) $< 1 -std=c++14 -I/usr/lib/clang/3.6.0/include | \
+	./$(LISP_DRIVER) - $(TEST_CXX_OBJ)
 check-cpp: $(TEST_CXX_OBJ)

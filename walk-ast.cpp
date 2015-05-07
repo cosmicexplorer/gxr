@@ -7,7 +7,7 @@
 #include <sstream>   // for string manipulation in getFile
 #include <regex>     // for parseArgs regex matching
 #include <stdexcept> // for ArgumentError
-#include <assert.h>
+#include <list>      // for std::list to debug failure
 // libclang includes
 #include <clang-c/Index.h> // for clang parsing
 // local includes
@@ -50,8 +50,8 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
 std::string infile_str;
 bool do_parse_other_files(true);
 // stack we use to traverse the tree
-// std::stack<CXCursor> ast_stack;
-SCB::Stack<CXCursor> ast_stack;
+std::stack<CXCursor> ast_stack;
+// SCB::Stack<CXCursor> ast_stack;
 // base translation unit for the file we're compilingx
 CXTranslationUnit * infile_ast;
 // used in traversal
@@ -104,8 +104,7 @@ std::string getLocation(CXSourceLocation loc) {
   CXFile file;
   unsigned int line(0), col(0), offset(0);
   clang_getSpellingLocation(loc, &file, &line, &col, &offset);
-  out << "(:file \"" << getClangFileName(file) << "\" :line \"" << line
-      << "\" :col \"" << col << "\" :offset \"" << offset << "\")";
+  out << "(:line " << line << " :col " << col << " :offset " << offset << ")";
   return out.str();
 }
 
@@ -184,12 +183,22 @@ std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
     clang_disposeString(cxtoken);
   }
   clang_disposeTokens(*tup, tokens, nTokens);
-  return "\"" + out.str() + "\"";
+  return "\"" + std::regex_replace(
+                 std::regex_replace(out.str(), std::regex("\\\\\""), "\\\\\""),
+                 std::regex("\""), "\\\"") +
+         "\"";
 }
 
 bool cursorEquals(CXCursor a, CXCursor b) {
-  return (a.data[0] == b.data[0] and a.data[1] == b.data[1] and
+  return (a.data[1] == b.data[1] and
+          // a.data[0] == b.data[0] and
           a.data[2] == b.data[2]);
+}
+
+std::string getCursorPointers(CXCursor cursor) {
+  std::stringstream s;
+  s << cursor.data[0] << "," << cursor.data[1] << "," << cursor.data[2];
+  return s.str();
 }
 
 std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
@@ -201,38 +210,63 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
   } else if (cursorEquals(prev_parent, parent)) {
     retval = TreeMotion::Sibling;
     if (ast_stack.empty()) {
-      throw std::logic_error("should never have 0! we counted wrong.");
-    }
-    ast_stack.pop();
-    ++numPops;
-  } else {
-    // size_t len = ast_stack.size();
-    // std::cerr << len << std::endl;
-    /*
-      this causes a segfault when parsing the hello.cpp test file; for some
-      reason, "len" is always 5, but when using gdb to query ast_stack.size(),
-      ast_stack.empty(), or even using "print", it always shows the stack as
-      having zero elements. I would put it down to some multithreaded bug, but
-      even when using a mutex, it stays. I think there are some real memory
-      safety issues with using this library, and I'm not sure what (I had a
-      std::stack segfault earlier in testing for unrelated reasons). This line
-      is the reason we'll be sticking to C for now.
-    */
-    assert(!ast_stack.empty());
-    // a sneaky compiler optimization (that occurs even at -O0! with either gcc
-    // or clang!) makes the assertion succeed but the line below it fail. moving
-    // this into a separate variable avoids this.
-    CXCursor cur_top(ast_stack.top());
-    while (not cursorEquals(parent, cur_top)) {
-      assert(!ast_stack.empty());
+      std::cerr << "stack is empty at TreeMotion::Sibling!" << std::endl;
+    } else {
       ast_stack.pop();
       ++numPops;
     }
+  } else {
+    std::list<std::string> cursorResults;
+    if (ast_stack.empty()) {
+      goto error;
+    }
+    // assert(!ast_stack.empty());
+    // a sneaky compiler optimization (that occurs even at -O0! with either gcc
+    // or clang!) makes the assertion succeed but the line below it fail. moving
+    // this into a separate variable avoids this.
+    // CXCursor cur_top(ast_stack.top());
+    while (not cursorEquals(parent, ast_stack.top())) {
+      cursorResults.emplace_front(getCursorPointers(ast_stack.top()));
+      ast_stack.pop();
+      ++numPops;
+      // assert(!ast_stack.empty());
+      // cur_top = ast_stack.top();
+      if (ast_stack.empty()) {
+        goto error;
+      }
+    }
+    goto success;
+  error:
+    for (auto & res : cursorResults) {
+      std::cerr << "top: " << res << std::endl;
+    }
+    std::cerr << "parent: " << getCursorPointers(parent)
+              << "; child: " << getCursorPointers(current) << std::endl;
+    std::cerr << "stack is empty at TreeMotion::HigherSibling!" << std::endl;
+  success:
     retval = TreeMotion::HigherSibling;
   }
   ast_stack.push(current);
   prev_cursor = current;
   prev_parent = parent;
+  std::string retstr;
+  switch (retval) {
+  case TreeMotion::HigherSibling:
+    retstr = "HigherSibling";
+    break;
+  case TreeMotion::Sibling:
+    retstr = "Sibling";
+    break;
+  case TreeMotion::Child:
+    retstr = "Child";
+    break;
+  default:
+    throw 1;
+  }
+  // std::cout << std::endl
+  //           << getCursorPointers(parent) << " : " <<
+  //           getCursorPointers(current)
+  //           << " : " << retstr << std::endl;
   return std::tuple<TreeMotion, size_t>(retval, numPops);
 }
 
@@ -279,7 +313,7 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
               << "\"" << fromFile << "\""
               << " :text " << getExtent(extent, infile_ast)
               << " :extent (:range-start "
-              << getLocation(clang_getRangeStart(extent)) << ":range-end "
+              << getLocation(clang_getRangeStart(extent)) << " :range-end "
               << getLocation(clang_getRangeEnd(extent)) << ")";
   }
   return CXChildVisit_Recurse;

@@ -15,6 +15,8 @@ int _a() {
   return _b;
 }
 
+void _b(){}
+
 int main();
 
 int main() {

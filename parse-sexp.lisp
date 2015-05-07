@@ -66,27 +66,19 @@
 
 (defun main ()
   (handler-case
-      (if (or (< (length *posix-argv*) 3)
-              (> (length *posix-argv*) 4))
+      (if (or (< (length *posix-argv*) 2)
+              (> (length *posix-argv*) 3))
           (error 'invalid-standard-stream :text
                  "Usage: parse-sexp PREPROC-INFILE AST-INFILE [OUTFILE]")
-          (if (string= (second *posix-argv*) (third *posix-argv*))
-              (error 'invalid-standard-stream :text
-                     (concatenate
-                      'string
-                      "error: two streams are reading from the same file: \""
-                      (second *posix-argv*) "\""))
-              (let ((preproc-infile (second *posix-argv*))
-                    (ast-infile (third *posix-argv*))
-                    (outfile (if (> (length *posix-argv*) 3)
-                                 (fourth *posix-argv*) "-")))
-                (with-open-files-as-type
-                    ((preproc-instream preproc-infile :direction :input)
-                     (ast-instream ast-infile :direction :input)
-                     (outstream outfile :direction :output
-                                :if-exists :overwrite
-                                :if-does-not-exist :create))
-                  (read-output-into-obj-then-dump ast-instream outstream)))))
+          (let ((ast-infile (second *posix-argv*))
+                (outfile (if (> (length *posix-argv*) 2)
+                             (third *posix-argv*) "-")))
+            (with-open-files-as-type
+                ((ast-instream ast-infile :direction :input)
+                 (outstream outfile :direction :output
+                            :if-exists :overwrite
+                            :if-does-not-exist :create))
+              (read-output-into-obj-then-dump ast-instream outstream))))
     (invalid-standard-stream (ex)
       (format *error-output* "~A~&" (text ex))
       (exit :abort t))))
