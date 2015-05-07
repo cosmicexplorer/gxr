@@ -11,70 +11,96 @@
 (defun make-empty-char-seq ()
   (make-array 0 :element-type 'character :adjustable t :fill-pointer 0))
 
-(defun push-token-onto-stack (root-stack cur-token c state-list)
-  (vector-push-extend c cur-token)
+(defun push-token-onto-stack (root-stack cur-token do-reverse &optional c)
+  (when c (vector-push-extend c cur-token))
   (let ((*readtable* (copy-readtable nil)))
     (setf (readtable-case *readtable*) :preserve)
-    (setf (car root-stack) (cons (read-from-string cur-token) (car root-stack))
-          state-list '(:pipe nil :quote nil))))
+    (list
+     (let ((list
+            (cons (read-from-string cur-token) (car root-stack))))
+       (if do-reverse
+           (reverse list)
+           list))
+     '(:pipe nil :quote nil))))
+
+(defmacro update-token-stack-and-state-list (stack token list last-ind ind
+                                             &optional char)
+  ;; if no char provided, then do-reverse is t (this means we're at the end of a
+  ;; list)
+  `(destructuring-bind (tmp-stack-top tmp-state-list)
+       ,(if char
+            `(push-token-onto-stack ,stack ,token nil ,char)
+            `(push-token-onto-stack ,stack ,token t))
+     (setf (car ,stack) tmp-stack-top
+           ,list tmp-state-list)
+     (setq ,token (make-empty-char-seq)
+           ,last-ind ,ind)))
 
 (defun parse-large-read-obj (str-to-parse state-list root-stack)
+  (proclaim '(optimize (debug 3)))
   ;; :pipe can be for either '|asdf| syms or :|asdf| atoms
   (unless state-list (setq state-list (list :pipe nil :quote nil)))
+  (unless root-stack (setq root-stack (list nil)))
   (loop for ind from 0 upto (1- (length str-to-parse))
      with last-ind = 0 and cur-token = (make-empty-char-seq)
      with prev-is-backslash = nil
      do (let ((c (aref str-to-parse ind)))
           (if (char-equal c #\\)
-              (setq prev-is-backslash (not prev-is-backslash))
+              (progn
+                (setq prev-is-backslash (not prev-is-backslash))
+                (unless prev-is-backslash
+                  (vector-push-extend c cur-token)))
               (cond
                 ((and (or (char-equal c #\') (char-equal c #\:))
                       (not (or (getf state-list :pipe)
                                (getf state-list :quote))))
                  (vector-push-extend c cur-token))
                 ((char-equal c #\|)
-                 (if (getf state-list :pipe)
+                 (if (and (not prev-is-backslash) (getf state-list :pipe))
                      (progn
-                       (push-token-onto-stack root-stack cur-token c state-list)
-                       (setq cur-token (make-empty-char-seq)
-                             last-ind ind))
+                       (update-token-stack-and-state-list
+                        root-stack cur-token state-list last-ind ind c))
                      (progn
                        (vector-push-extend c cur-token)
-                       (unless (getf state-list :quote)
+                       (unless (or (getf state-list :quote) prev-is-backslash)
                          ;; always going to be directly after ' or :
                          (setf (getf state-list :pipe) t)))))
                 ((char-equal c #\")
-                 (if (getf state-list :quote)
+                 (if (and (not prev-is-backslash) (getf state-list :quote))
                      (progn
-                       (push-token-onto-stack root-stack cur-token c state-list)
-                       (setq cur-token (make-empty-char-seq)
-                             last-ind ind))
+                       (update-token-stack-and-state-list
+                        root-stack cur-token state-list last-ind ind c))
                      (progn
                        (vector-push-extend c cur-token)
-                       (unless (getf state-list :pipe)
+                       (unless (or (getf state-list :pipe) prev-is-backslash)
                          (setf (getf state-list :quote) t)))))
                 ((and (char-equal c #\()
                       (not (or (getf state-list :pipe)
                                (getf state-list :quote))))
                  (unless (= (length cur-token) 0)
-                   (error 'invalid-parse :text "cur-token should be 0 here!"))
+                   (error 'invalid-parse
+                          :text "cur-token should be 0 at begin paren!"))
                  (setq root-stack (cons nil root-stack)))
                 ((and (char-equal c #\))
                       (not (or (getf state-list :pipe)
                                (getf state-list :quote))))
                  (unless (= (length cur-token) 0)
-                   (error 'invalid-parse :text "cur-token should be 0 here!"))
-                 (setq root-stack (cdr root-stack)
-                       last-ind ind))
-                ;; space or newline
-                ((or (char-equal c #\ )
-                     (char-equal c #\linefeed))
-                 (when (or (getf state-list :pipe) (getf state-list :quote))
-                   (vector-push-extend c cur-token)))
-                (t (vector-push-extend c cur-token)))))
-     finally (return (list root-stack
-                           (subseq str-to-parse (1+ last-ind))
-                           state-list))))
+                   (update-token-stack-and-state-list
+                    root-stack cur-token state-list last-ind ind))
+                 ;; (setq root-stack (cdr root-stack))
+                 )
+                 ;; space or newline
+                 ((or (char-equal c #\ )
+                      (char-equal c #\linefeed))
+                  (if (or (getf state-list :pipe) (getf state-list :quote))
+                      (vector-push-extend c cur-token)
+                      (unless (= (length cur-token) 0)
+                        (update-token-stack-and-state-list
+                         root-stack cur-token state-list last-ind ind c))))
+                 (t (vector-push-extend c cur-token)))))
+          finally (return
+                    (list root-stack (subseq str-to-parse (1+ last-ind))
+                          state-list))))
 
 (defun read-large-object-without-error-checking (instream &optional block-size)
   "An iterative approach to lisp's (read) command which avoids recursion at the
@@ -98,10 +124,10 @@ or 1024 if BLOCK-SIZE is not given."
                            (parse-large-read-obj
                             leftover-str state-list root-stack)
                          (if (or (> (length rest-of-str) 0)
-                                 ;; FIX THE BELOW
-                                 (< (count nil ret-state-list) num-states))
+                                 (> (length obj) 1)
+                                 (> (length rest-of-str) 0))
                              (error 'invalid-parse
-                                    :text (list rest-of-str ret-state-list))
+                                    :text (list obj rest-of-str ret-state-list))
                              obj))))))
 
 (defmacro check-types (checker-fun exception &rest objs)
