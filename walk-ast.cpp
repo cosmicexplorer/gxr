@@ -206,7 +206,6 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
     ast_stack.pop();
     ++numPops;
   } else {
-    std::list<std::string> cursorResults;
     while (not cursorEquals(parent, ast_stack.top())) {
       ast_stack.pop();
       ++numPops;
@@ -254,16 +253,16 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
       std::cout << "(";
     }
     CXSourceRange extent = clang_getCursorExtent(cursor);
-    std::cout << ":name "
+    std::cout << ":|name| "
               << "\"" << unquoteForeignString(clang_getCString(cxcursorStr))
               << "\""
-              << " :type "
+              << " :|type| "
               // || pipes are because types can have spaces
-              << "'|" << clang_getCString(cxcursorKindStr) << "| :file "
+              << "'|" << clang_getCString(cxcursorKindStr) << "| :|file| "
               << "\"" << fromFile << "\""
-              << " :text " << getExtent(extent, infile_ast)
-              << " :extent (:range-start "
-              << getLocation(clang_getRangeStart(extent)) << " :range-end "
+              << " :|text| " << getExtent(extent, infile_ast)
+              << " :|extent| (:|range-start| "
+              << getLocation(clang_getRangeStart(extent)) << " :|range-end| "
               << getLocation(clang_getRangeEnd(extent)) << ")";
   }
   return CXChildVisit_Recurse;

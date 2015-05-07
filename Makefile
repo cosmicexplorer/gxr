@@ -20,7 +20,7 @@ COMPILE_LISP := $(LISP) --control-stack-size 100000000 --noinform --non-interact
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-DEPS := Stack.h
+DEPS :=
 AST_OBJ := walk-ast.o
 LISP_OBJ := parse-sexp.fasl
 
