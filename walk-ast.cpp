@@ -270,8 +270,7 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
               // || pipes are because types can have spaces
               << "'|" << clang_getCString(cxcursorKindStr) << "| :file "
               << "\"" << fromFile << "\""
-              << " :text " << getExtent(extent, infile_ast) << " :location "
-              << getLocation(clang_getCursorLocation(cursor))
+              << " :text " << getExtent(extent, infile_ast)
               << " :extent (:range-start "
               << getLocation(clang_getRangeStart(extent)) << ":range-end "
               << getLocation(clang_getRangeEnd(extent)) << ")";
