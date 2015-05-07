@@ -1,17 +1,13 @@
-isInString = no
-numChars = 0
+byline = require 'byline'
+sleep = require 'sleep'
 
-process.stdin.on 'data', (data) ->
+lineStream = byline(process.stdin)
+
+lineStream.on 'data', (data) ->
   str = data.toString()
-  for c in str
-    ++numChars
-    isInString = not isInString if c is "\""
-    if c is "," and not isInString
-      console.error str
-      for i in [0..100] by 1
-        console.error "--"
-      console.error "exited at char #{numChars}"
-      process.exit 1
+  console.error str.replace /^\s+/, ""
+  console.log str
+  sleep.usleep 1000
 
-process.stdin.on 'end', ->
+lineStream.on 'end', ->
   console.error "didn't fuck up somehow?"

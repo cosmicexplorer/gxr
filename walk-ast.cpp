@@ -172,6 +172,11 @@ std::string getFile(CXSourceLocation location) {
   return getClangFileName(file);
 }
 
+std::string unquoteForeignString(std::string s) {
+  return std::regex_replace(std::regex_replace(s, std::regex("\\\\"), "\\\\"),
+                            std::regex("\""), "\\\"");
+}
+
 std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
   CXToken * tokens = 0;
   unsigned int nTokens = 0;
@@ -183,10 +188,8 @@ std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
     clang_disposeString(cxtoken);
   }
   clang_disposeTokens(*tup, tokens, nTokens);
-  return "\"" + std::regex_replace(
-                 std::regex_replace(out.str(), std::regex("\\\\\""), "\\\\\""),
-                 std::regex("\""), "\\\"") +
-         "\"";
+  // sanitize quotes (i hate the std::regex quoting rules)
+  return "\"" + unquoteForeignString(out.str()) + "\"";
 }
 
 bool cursorEquals(CXCursor a, CXCursor b) {
@@ -306,7 +309,8 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
     }
     CXSourceRange extent = clang_getCursorExtent(cursor);
     std::cout << ":name "
-              << "\"" << clang_getCString(cxcursorStr) << "\""
+              << "\"" << unquoteForeignString(clang_getCString(cxcursorStr))
+              << "\""
               << " :type "
               // || pipes are because types can have spaces
               << "'|" << clang_getCString(cxcursorKindStr) << "| :file "
