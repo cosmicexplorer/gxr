@@ -1,10 +1,12 @@
 // http://www.ibm.com/developerworks/library/os-createcompilerllvm2/
 #include <iostream>
 
+// #include <clang-c/Index.h>
 #include <llvm/Option/Arg.h>
 #include <llvm/Option/ArgList.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Lex/Preprocessor.h>
+#include <clang/Basic/TargetInfo.h>
 
 int main(int argc, char ** argv) {
   if (argc < 2) {
@@ -12,10 +14,11 @@ int main(int argc, char ** argv) {
     exit(1);
   }
   clang::CompilerInstance ci;
-  ci.createDiagnostics(0, nullptr);            // create DiagnosticsEngine
-  ci.createFileManager();                      // create FileManager
-  ci.createSourceManager(ci.getFileManager()); // create SourceManager
-  ci.createPreprocessor(clang::TU_Complete);   // create Preprocessor
+  ci.createDiagnostics(
+   new clang::ForwardingDiagnosticConsumer(ci.getDiagnosticClient()), true);
+  ci.createFileManager();
+  ci.createSourceManager(ci.getFileManager());
+  ci.createPreprocessor(clang::TU_Complete);
   const clang::FileEntry * pFile = ci.getFileManager().getFile(argv[1]);
   ci.getSourceManager().createFileID(pFile, clang::SourceLocation(),
                                      clang::SrcMgr::C_User);

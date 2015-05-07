@@ -1,4 +1,5 @@
 walk-ast
+pull-preprocessor-directives
 parse-sexp
 *.o
 *.fasl

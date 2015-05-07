@@ -20,10 +20,15 @@ COMPILE_LISP := $(LISP) --noinform --non-interactive \
 
 LLVM_FLAGS := $(shell llvm-config --cxxflags)
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
-# keep looking for libs to add until it links!
-LLVMLDFLAGS := -lclangFrontend -lclangSema -lclangDriver -lLLVMSupport \
-	-lLLVMOption $(shell llvm-config --ldflags --libs) -pthread -ldl -lz \
-	-lncurses
+
+# first the llvm-config, which should just work, but doesn't
+# then extraneous other random libraries, which shouldn't be required, but are
+LLVMLDFLAGS := $(shell llvm-config --ldflags --libs) \
+	-pthread -ldl -lz -lncurses \
+	-lclangFrontend -lclangParse -lclangSema -lclangAnalysis -lclangAST \
+	-lclangBasic -lclangDriver -lclangSerialization -lclangEdit -lclangLex \
+	-lLLVMSupport -lLLVMOption -lLLVMBitReader -lLLVMMC -lLLVMMCParser \
+	-lLLVMSupport
 
 LDFLAGS := -lclang
 
@@ -58,8 +63,10 @@ ${LISP_DRIVER}: $(LISP_OBJ)
 
 clean:
 	@rm -f $(AST_DRIVER)
+	@rm -f ${PREPROC_DRIVER}
 	@rm -f $(LISP_DRIVER)
 	@rm -f $(AST_OBJ)
+	@rm -f $(PREPROC_OBJ)
 	@rm -f $(LISP_OBJ)
 	@rm -f $(wildcard *.fasl) # pick up random compilations
 
@@ -72,15 +79,15 @@ TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 check: check-c check-cpp
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< 0  -x c -I/usr/lib/clang/3.6.0/include | \
+	./$(AST_DRIVER) $< 0 -x c -I/usr/lib/clang/3.6.0/include | \
 	./$(LISP_DRIVER) /dev/null - $(TEST_C_OBJ)
 check-c: $(TEST_C_OBJ)
 
 # this test is still broken due to random segfaults
-# i thinks it's just because c++ is a bigger language and libclang is an iffy
+# i think it's just because c++ is a bigger language and libclang is an iffy
 # library
 $(TEST_CXX_OBJ): $(TEST_CXX) all
-	./$(AST_DRIVER) $< 0 -x c++ -std=c++11 \
+	./$(AST_DRIVER) $< 1 -x c++ -std=c++11 \
 	-I/usr/lib/clang/3.6.0/include | \
 	./$(LISP_DRIVER) /dev/null - $(TEST_CXX_OBJ)
 check-cpp: $(TEST_CXX_OBJ)
