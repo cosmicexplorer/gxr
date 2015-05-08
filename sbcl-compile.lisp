@@ -8,7 +8,7 @@
 (defun local-compile ()
   (if (/= (length *posix-argv*) 3)
       (format
-       *error-output* "~A~&~A~&~A&"
+       *error-output* "~A~&~A~&~A~&"
        "Usage: sbcl-compile [-f|-c] INFILE"
        "'-f' compiles to fasl, '-c' to executable."
        "Run this as: 'sbcl --noinform --load sbcl-compile.lisp --quit ARGS'")

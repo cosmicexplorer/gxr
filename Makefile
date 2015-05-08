@@ -6,15 +6,20 @@ CXX := $(shell if hash $(CLANG_CXX) 2>/dev/null; then echo $(CLANG_CXX); else \
 	if hash $(GCC_CXX) 2>/dev/null; then echo $(GCC_CXX); else echo oops; \
 	fi; fi)
 ifeq ($(CXX), oops)
-$(error no suitable compiler found! install $(CLANG_CXX) or $(GCC_CXX))
+$(error no suitable c++ compiler found! install $(CLANG_CXX) or $(GCC_CXX))
 endif
 
-LISP := sbcl
+LISP_CC := sbcl
+LISP := $(shell if hash $(LISP_CC) 2>/dev/null; then echo $(LISP_CC); else \
+	echo oops; fi)
+ifeq ($(LISP), oops)
+$(error no suitable lisp compiler found! install $(LISP_CC))
+endif
 
 # takes a path to $(LISP) and loads sbcl-compile.lisp which has the top-level
 # form (local-compile). the allowable succeeding arguments are detailed in
 # sbcl-compile.sh
-COMPILE_LISP := $(LISP) --control-stack-size 100000000 --noinform --non-interactive \
+COMPILE_LISP := $(LISP) --noinform --non-interactive \
 	--load ./sbcl-compile.lisp --eval "(local-compile)"
 
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
