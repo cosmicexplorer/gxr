@@ -1,16 +1,12 @@
 // heavily inspired by https://gist.github.com/yifu/3761845
 
 // standard lib includes
-#include <regex>     // for parseArgs regex matching
-#include <cstring>
+#include <string>
+#include <cassert>
 // libclang includes
+extern "C" {
 #include <clang-c/Index.h> // for clang parsing
-
-// clang visitor functions
-std::string getClangFileName(const CXFile & file);
-std::string getDiagInfos(CXDiagnostic diag);
-std::string getFixIts(CXDiagnostic diag);
-
+}
 // globals
 // name of file we're currently parsing
 std::string infile_str;
@@ -20,34 +16,44 @@ CXTranslationUnit * infile_ast;
 CXCursor prev_cursor;
 CXCursor prev_parent;
 
+enum CXChildVisitResult (*visit_ptr)(CXCursor *, CXCursor *) = NULL;
+
+enum CXChildVisitResult visit(CXCursor, CXCursor, CXClientData);
+
 extern "C" {
-int visit_ast(char * infile) {
-  return strlen(infile);
+int visit_ast(char * infile, char ** clangArgs, int numArgs,
+              enum CXChildVisitResult (*visit_ptr_arg)(CXCursor *,
+                                                       CXCursor *)) {
+  visit_ptr = visit_ptr_arg;
+  CXIndex index(clang_createIndex(0, 0));
+  CXTranslationUnit tu =
+   clang_parseTranslationUnit(index, infile, clangArgs, numArgs, nullptr, 0,
+                              CXTranslationUnit_DetailedPreprocessingRecord);
+  int n = clang_getNumDiagnostics(tu);
+  for (int i = 0; i < n; ++i) {
+    CXDiagnostic diag(clang_getDiagnostic(tu, i));
+    CXString diag_str(
+     clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
+    // std::cerr << clang_getCString(diag_str) << std::endl;
+    clang_disposeString(diag_str);
+    // std::cerr << getDiagInfos(diag) << std::endl;
+    // std::cerr << getFixIts(diag) << std::endl;
+  }
+  prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
+  infile_ast = &tu;
+  clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
+  clang_disposeTranslationUnit(tu);
+  clang_disposeIndex(index);
+  return 1;
 }
-// int visit_ast(char * infile, char ** clangArgs, int numArgs,
-//               enum CXChildVisitResult (*visit)(CXCursor cursor, CXCursor parent,
-//                                                CXClientData client_data
-//                                                __attribute__((unused)))) {
-//   CXIndex index(clang_createIndex(0, 0));
-//   CXTranslationUnit tu =
-//    clang_parseTranslationUnit(index, infile, clangArgs, numArgs, nullptr, 0,
-//                               CXTranslationUnit_DetailedPreprocessingRecord);
-//   int n = clang_getNumDiagnostics(tu);
-//   for (int i = 0; i < n; ++i) {
-//     CXDiagnostic diag(clang_getDiagnostic(tu, i));
-//     CXString diag_str(
-//      clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
-//     std::cerr << clang_getCString(diag_str) << std::endl;
-//     clang_disposeString(diag_str);
-//     std::cerr << getDiagInfos(diag) << std::endl;
-//     std::cerr << getFixIts(diag) << std::endl;
-//   }
-//   prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
-//   infile_ast = &tu;
-//   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
-//   clang_disposeTranslationUnit(tu);
-//   clang_disposeIndex(index);
-// }
+}
+
+enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
+                              CXClientData client_data
+                              __attribute__((unused))) {
+  assert(NULL != visit_ptr);
+  visit_ptr(&cursor, &parent);
+  return CXChildVisit_Break;
 }
 
 // std::string getLocation(CXSourceLocation loc) {
