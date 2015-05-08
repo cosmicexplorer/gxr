@@ -2,3 +2,6 @@ walk-ast
 parse-sexp
 *.o
 *.fasl
+ast-visit
+file
+*.so

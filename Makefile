@@ -1,12 +1,9 @@
 .PHONY: all clean check-c check-cpp check
 
-CLANG_CXX := clang++
-GCC_CXX := g++
-CXX := $(shell if hash $(CLANG_CXX) 2>/dev/null; then echo $(CLANG_CXX); else \
-	if hash $(GCC_CXX) 2>/dev/null; then echo $(GCC_CXX); else echo oops; \
-	fi; fi)
+CXX := $(shell if hash clang++ 2>/dev/null; then echo clang++; else \
+	if hash g++ 2>/dev/null; then echo g++; else echo oops; fi; fi)
 ifeq ($(CXX), oops)
-$(error no suitable c++ compiler found! install $(CLANG_CXX) or $(GCC_CXX))
+$(error no suitable c++ compiler found! install g++ or clang++)
 endif
 
 LISP_CC := sbcl
@@ -22,35 +19,24 @@ endif
 COMPILE_LISP := $(LISP) --noinform --non-interactive \
 	--load ./sbcl-compile.lisp --eval "(local-compile)"
 
-CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
+CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-DEPS :=
-AST_OBJ := walk-ast.o
-LISP_OBJ := parse-sexp.fasl
+DRIVERS := walk-ast.so parse-sexp ast-visit
 
-AST_DRIVER := walk-ast
-LISP_DRIVER := parse-sexp
-
-all: $(AST_DRIVER) $(LISP_DRIVER)
-
-walk-ast.o: walk-ast.cpp $(DEPS)
-	$(CXX) -c $< $(CXXFLAGS)
+all: $(DRIVERS)
 
 %.fasl: %.lisp
 	$(COMPILE_LISP) -f $<
 
-$(AST_DRIVER): $(AST_OBJ)
-	$(CXX) $(AST_OBJ) -o $@ $(LDFLAGS)
-
-$(LISP_DRIVER): $(LISP_OBJ)
+%: %.fasl
 	$(COMPILE_LISP) -c $<
 
+%.so: %.cpp
+	$(CXX) $< -o $@ $(CXXFLAGS) $(LDFLAGS) -shared -fPIC
+
 clean:
-	@rm -f $(AST_DRIVER)
-	@rm -f $(LISP_DRIVER)
-	@rm -f $(AST_OBJ)
-	@rm -f $(LISP_OBJ)
+	@rm -f $(DRIVERS)
 	@rm -f $(wildcard *.fasl) # pick up random compilations
 
 TEST_DIR := test
@@ -62,14 +48,11 @@ TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 check: check-c check-cpp
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< 1 -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) - $(TEST_C_OBJ)
+	./$(LISP_DRIVER) $(TEST_C) $(TEST_C_OBJ) 1 \
+	-I/usr/lib/clang/3.6.0/include
 check-c: $(TEST_C_OBJ)
 
-# this test is still broken due to random segfaults
-# i think it's just because c++ is a bigger language and libclang is an iffy
-# library
 $(TEST_CXX_OBJ): $(TEST_CXX) all
-	./$(AST_DRIVER) $< 1 -std=c++14 -I/usr/lib/clang/3.6.0/include | \
-	./$(LISP_DRIVER) - $(TEST_CXX_OBJ)
+	./$(LISP_DRIVER) $(TEST_CXX) $(TEST_CXX_OBJ) 1 \
+	-I/usr/lib/clang/3.6.0/include
 check-cpp: $(TEST_CXX_OBJ)
