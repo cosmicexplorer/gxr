@@ -1,6 +1,7 @@
 // heavily inspired by https://gist.github.com/yifu/3761845
 
 // standard lib includes
+#include <iostream>
 #include <string>
 #include <cassert>
 // libclang includes
@@ -16,44 +17,54 @@ CXTranslationUnit * infile_ast;
 CXCursor prev_cursor;
 CXCursor prev_parent;
 
-enum CXChildVisitResult (*visit_ptr)(CXCursor *, CXCursor *) = NULL;
+enum CXChildVisitResult (*visit_ptr)(CXCursor *, CXCursor *) = nullptr;
 
 enum CXChildVisitResult visit(CXCursor, CXCursor, CXClientData);
 
 extern "C" {
-int visit_ast(char * infile, char ** clangArgs, int numArgs,
+CXChildVisitResult RECURSE = CXChildVisit_Recurse;
+CXChildVisitResult CONTINUE = CXChildVisit_Continue;
+CXChildVisitResult BREAK = CXChildVisit_Break;
+
+int visit_ast(const char * infile, char ** clangArgs, int numArgs,
               enum CXChildVisitResult (*visit_ptr_arg)(CXCursor *,
                                                        CXCursor *)) {
   visit_ptr = visit_ptr_arg;
   CXIndex index(clang_createIndex(0, 0));
-  CXTranslationUnit tu =
+  CXTranslationUnit tu(
    clang_parseTranslationUnit(index, infile, clangArgs, numArgs, nullptr, 0,
-                              CXTranslationUnit_DetailedPreprocessingRecord);
-  int n = clang_getNumDiagnostics(tu);
-  for (int i = 0; i < n; ++i) {
-    CXDiagnostic diag(clang_getDiagnostic(tu, i));
-    CXString diag_str(
-     clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
-    // std::cerr << clang_getCString(diag_str) << std::endl;
-    clang_disposeString(diag_str);
-    // std::cerr << getDiagInfos(diag) << std::endl;
-    // std::cerr << getFixIts(diag) << std::endl;
-  }
+                              CXTranslationUnit_DetailedPreprocessingRecord));
+  // int n = clang_getNumDiagnostics(tu);
+  // for (int i = 0; i < n; ++i) {
+  //   CXDiagnostic diag(clang_getDiagnostic(tu, i));
+  //   CXString diag_str(
+  //    clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
+  // std::cerr << clang_getCString(diag_str) << std::endl;
+  // clang_disposeString(diag_str);
+  // std::cerr << getDiagInfos(diag) << std::endl;
+  // std::cerr << getFixIts(diag) << std::endl;
+  // }
   prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
   infile_ast = &tu;
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
-  return 1;
+  CXCursor c = {.kind = CXCursor_UnexposedDecl,
+                .xdata = 45,
+                .data = {nullptr, nullptr, nullptr}};
+  if (CXChildVisit_Break == visit(c, c, nullptr)) {
+    return 3;
+  } else {
+    return 1;
+  }
 }
 }
 
 enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
-  assert(NULL != visit_ptr);
-  visit_ptr(&cursor, &parent);
-  return CXChildVisit_Break;
+  assert(nullptr != visit_ptr);
+  return visit_ptr(&cursor, &parent);
 }
 
 // std::string getLocation(CXSourceLocation loc) {

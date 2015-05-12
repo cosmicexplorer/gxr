@@ -1,43 +1,34 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (asdf:operate 'asdf:load-op 'cffi)
-  (use-package 'cffi))
+  (import 'sb-alien::define-alien-callback))
 
-(define-foreign-library walk-ast
-  (t (:default "walk-ast")))
+(load-shared-object "./walk-ast.so")
 
-(pushnew #P"./" *foreign-library-directories* :test #'equal)
+(define-alien-type CXChildVisitResult int)
+(define-alien-type CXCursorKind int)
+(define-alien-type CXCursor
+    (struct CXCursor
+            (kind int)                  ; enum, actually
+            (xdata int)
+            (data (array (* t) 3))))
+(define-alien-type CXClientData (* t))
+(define-alien-type CXChildVisitResult int)
 
-(use-foreign-library walk-ast)
+(define-alien-variable "RECURSE" CXChildVisitResult)
+(define-alien-variable "CONTINUE" CXChildVisitResult)
+(define-alien-variable "BREAK" CXChildVisitResult)
 
-(defctype CXCursorKind :int)
-(defcstruct CXCursor
-  (kind CXCursorKind)
-  (xdata :int)
-  (data :pointer))
-(defctype CXClientData :pointer)
-(defctype CXChildVisitResult :int)
+(define-alien-routine visit_ast int
+  (infile c-string)
+  (clangArgs (* c-string))
+  (numArgs int)
+  (visit_ptr_arg
+   (function CXChildVisitResult (* CXCursor) (* CXCursor))))
 
-(defcfun "visit_ast" :int
-  (infile :pointer) (clangArgs :pointer) (numArgs :int)
-  (visit_ptr_arg :pointer))
-
-(defcallback visit-call CXChildVisitResult
-    ((cursor (:pointer (:struct CXCursor)))
-     (parent (:pointer (:struct CXCursor))))
-  (format t "~A~&"
-          (list
-           (foreign-slot-value cursor '(:struct CXCursor) 'xdata)
-           (foreign-slot-value parent '(:struct CXCursor) 'xdata)))
-  0)
-
-;; (defcstruct test-struct
-;;   (a :int))
-;; (defcfun "test_struct_fun" :void (c :int) (fun :pointer))
-;; (defcallback fun-test :void ((ts (:pointer (:struct test-struct))))
-;;   (format t "~A~&"
-;;           (foreign-slot-value ts '(:struct test-struct) 'a)))
+(define-alien-callback test-callback int
+    ((c-a (* CXCursor))
+     (c-b (* CXCursor)))
+  (format *standard-output* "~A:~A~&" (slot c-a 'xdata) (slot c-b 'xdata))
+  RECURSE)
 
 (defun main ()
-  (with-foreign-string (in-file "test/hello.cpp")
-    (format *standard-output* "~A~&"
-            (visit-ast in-file (null-pointer) 0 (callback visit-call)))))
+  (visit_ast (second *posix-argv*) nil 0 test-callback))
