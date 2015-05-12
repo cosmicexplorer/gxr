@@ -1,7 +1,5 @@
-walk-ast
-parse-sexp
-*.o
-*.fasl
+# generated executable
 ast-visit
-file
+# binary files
+*.fasl
 *.so
