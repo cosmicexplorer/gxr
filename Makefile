@@ -22,7 +22,7 @@ COMPILE_LISP := $(LISP) --noinform --non-interactive \
 CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-DRIVERS := walk-ast.so parse-sexp ast-visit
+DRIVERS := walk-ast.so ast-visit
 
 all: $(DRIVERS)
 
