@@ -58,7 +58,6 @@ CXTranslationUnit * infile_ast;
 CXCursor prev_cursor;
 CXCursor prev_parent;
 
-// TODO: preprocessor stuff?? clang may have this utility as well
 int main(int argc, char ** argv) {
   const char * infile;
   char ** clangArgs;
@@ -71,7 +70,6 @@ int main(int argc, char ** argv) {
     std::cerr << "Usage: walk-ast INFILE SAME-FILE [ARGS...]" << std::endl;
     exit(1);
   }
-  // change second arg to 1 to get diagnostics
   CXIndex index(clang_createIndex(0, 0));
   CXTranslationUnit tu =
    clang_parseTranslationUnit(index, infile, clangArgs, numArgs, nullptr, 0,
