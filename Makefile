@@ -12,7 +12,7 @@ endif
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-DEPS := Stack.h
+DEPS :=
 AST_OBJ := walk-ast.o
 
 AST_DRIVER := walk-ast

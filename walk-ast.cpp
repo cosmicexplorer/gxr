@@ -10,8 +10,6 @@
 #include <list>      // for std::list to debug failure
 // libclang includes
 #include <clang-c/Index.h> // for clang parsing
-// local includes
-#include "Stack.h"
 
 // utility function used in closing delimiters on output
 // i literally don't remember how i came up with this but it works according to
@@ -51,7 +49,6 @@ std::string infile_str;
 bool do_parse_other_files(true);
 // stack we use to traverse the tree
 std::stack<CXCursor> ast_stack;
-// SCB::Stack<CXCursor> ast_stack;
 // base translation unit for the file we're compilingx
 CXTranslationUnit * infile_ast;
 // used in traversal
