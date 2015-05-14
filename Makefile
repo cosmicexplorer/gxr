@@ -36,7 +36,7 @@ check: check-c check-cpp
 INCLUDE_ARG := -I/usr/lib/clang/3.6.0/include
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< 1 $(INCLUDE_ARG) > $(TEST_C_OBJ)
+	./$(AST_DRIVER) $< 1 -DHEY -DWOW=3 $(INCLUDE_ARG) > $(TEST_C_OBJ)
 check-c: $(TEST_C_OBJ)
 
 $(TEST_CXX_OBJ): $(TEST_CXX) all

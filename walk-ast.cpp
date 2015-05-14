@@ -7,9 +7,9 @@
 #include <sstream>   // for string manipulation in getFile
 #include <regex>     // for parseArgs regex matching
 #include <stdexcept> // for ArgumentError
-#include <list>      // for std::list to debug failure
+#include <cassert>   // for assertion about stack size
 // libclang includes
-#include <clang-c/Index.h> // for clang parsing
+#include <clang-c/Index.h> // for clang lexing/parsing
 
 // utility function used in closing delimiters on output
 // i literally don't remember how i came up with this but it works according to
@@ -188,60 +188,36 @@ std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
 }
 
 bool cursorEquals(CXCursor a, CXCursor b) {
-  return (a.data[1] == b.data[1] and
-          // a.data[0] == b.data[0] and
-          a.data[2] == b.data[2]);
+  return (a.data[1] == b.data[1] and a.data[2] == b.data[2]);
 }
 
-std::string getCursorPointers(CXCursor cursor) {
-  std::stringstream s;
-  s << cursor.data[0] << "," << cursor.data[1] << "," << cursor.data[2];
-  return s.str();
+std::string cursorPointerStr(CXCursor c) {
+  std::stringstream ss;
+  ss << c.data[0] << "," << c.data[1] << "," << c.data[2];
+  return ss.str();
 }
 
 std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
                                                    CXCursor current) {
   TreeMotion retval;
   size_t numPops = 0;
+  std::cout << std::endl
+            << current.data[0] << "," << current.data[1] << ","
+            << current.data[2];
   if (cursorEquals(prev_cursor, parent)) {
     retval = TreeMotion::Child;
   } else if (cursorEquals(prev_parent, parent)) {
     retval = TreeMotion::Sibling;
-    if (ast_stack.empty()) {
-      std::cerr << "stack is empty at TreeMotion::Sibling!" << std::endl;
-    } else {
-      ast_stack.pop();
-      ++numPops;
-    }
+    assert(!ast_stack.empty());
+    ast_stack.pop();
+    ++numPops;
   } else {
-    std::list<std::string> cursorResults;
-    if (ast_stack.empty()) {
-      goto error;
-    }
-    // assert(!ast_stack.empty());
-    // a sneaky compiler optimization (that occurs even at -O0! with either gcc
-    // or clang!) makes the assertion succeed but the line below it fail. moving
-    // this into a separate variable avoids this.
-    // CXCursor cur_top(ast_stack.top());
+    assert(!ast_stack.empty());
     while (not cursorEquals(parent, ast_stack.top())) {
-      cursorResults.emplace_front(getCursorPointers(ast_stack.top()));
       ast_stack.pop();
       ++numPops;
-      // assert(!ast_stack.empty());
-      // cur_top = ast_stack.top();
-      if (ast_stack.empty()) {
-        goto error;
-      }
+      assert(!ast_stack.empty());
     }
-    goto success;
-  error:
-    for (auto & res : cursorResults) {
-      std::cerr << "top: " << res << std::endl;
-    }
-    std::cerr << "parent: " << getCursorPointers(parent)
-              << "; child: " << getCursorPointers(current) << std::endl;
-    std::cerr << "stack is empty at TreeMotion::HigherSibling!" << std::endl;
-  success:
     retval = TreeMotion::HigherSibling;
   }
   ast_stack.push(current);
@@ -261,10 +237,6 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
   default:
     throw 1;
   }
-  // std::cout << std::endl
-  //           << getCursorPointers(parent) << " : " <<
-  //           getCursorPointers(current)
-  //           << " : " << retstr << std::endl;
   return std::tuple<TreeMotion, size_t>(retval, numPops);
 }
 
@@ -282,24 +254,24 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
      clang_getCursorKindSpelling(clang_getCursorKind(cursor));
     if (TreeMotion::Child == typeOfMotion) {
       std::cout << " :children" << std::endl;
-      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-        std::cout << " ";
-      }
+      // for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+      std::cout << " ";
+      // }
       std::cout << "((";
     } else if (TreeMotion::Sibling == typeOfMotion) {
       std::cout << ")" << std::endl;
-      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-        std::cout << " ";
-      }
+      // for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+      std::cout << " ";
+      // }
       std::cout << "(";
     } else if (TreeMotion::HigherSibling == typeOfMotion) {
       for (size_t i = 0; i < CLOSE_DELIMS(numPops); ++i) {
         std::cout << ")";
       }
       std::cout << std::endl;
-      for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-        std::cout << " ";
-      }
+      // for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
+      std::cout << " ";
+      // }
       std::cout << "(";
     }
     CXSourceRange extent = clang_getCursorExtent(cursor);
