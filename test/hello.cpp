@@ -2,7 +2,11 @@
 
 int b = 3;
 
+namespace fff {
 int a = 3;
+}
+
+using namespace fff;
 
 int main(int argc, char ** argv) {
   int * aptr = nullptr;

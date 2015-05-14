@@ -99,7 +99,8 @@ std::string getLocation(CXSourceLocation loc) {
   CXFile file;
   unsigned int line(0), col(0), offset(0);
   clang_getSpellingLocation(loc, &file, &line, &col, &offset);
-  out << "(:line " << line << " :col " << col << " :offset " << offset << ")";
+  out << "(:file " << getClangFileName(file) << " :line " << line << " :col "
+      << col << " :offset " << offset << ")";
   return out.str();
 }
 
@@ -245,6 +246,14 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
   std::string fromFile = getFile(clang_getCursorLocation(cursor));
+  if (CXCursor_DeclRefExpr == cursor.kind) {
+    CXSourceRange cxsr = clang_getCursorReferenceNameRange(
+     cursor, CXNameRange_WantQualifier | CXNameRange_WantTemplateArgs, 0);
+    std::cout << std::endl
+              << "EXTENT!!!: " << getExtent(cxsr, infile_ast) << "|"
+              << getLocation(clang_getRangeStart(cxsr)) << ","
+              << getLocation(clang_getRangeEnd(cxsr));
+  }
   if (do_parse_other_files or fromFile == infile_str) {
     TreeMotion typeOfMotion;
     size_t numPops;

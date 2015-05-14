@@ -46,7 +46,7 @@ struct q {
   int b;
 };
 void _b() {
-  q BBBBBB = {.b = AAAAAA};
+  struct q BBBBBB = {.b = AAAAAA};
 }
 
 int main();
