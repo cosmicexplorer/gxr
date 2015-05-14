@@ -246,9 +246,9 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
   std::string fromFile = getFile(clang_getCursorLocation(cursor));
-  if (CXCursor_VarDecl == cursor.kind) {
+  if (CXCursor_DeclRefExpr == cursor.kind) {
     CXSourceRange cxsr =
-     clang_getCursorExtent(clang_getCanonicalCursor(cursor));
+     clang_getCursorExtent(clang_getCursorReferenced(cursor));
     std::cout << std::endl
               << "EXTENT!!!: " << getExtent(cxsr, infile_ast) << "|"
               << getLocation(clang_getRangeStart(cxsr)) << ","
