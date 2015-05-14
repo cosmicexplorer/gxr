@@ -4,34 +4,19 @@
 // c++ includes
 #include <iostream>  // for I/O
 #include <tuple>     // for parseArgs return type
-#include <sstream>   // for string manipulation in getFile
 #include <regex>     // for parseArgs regex matching
 #include <stdexcept> // for ArgumentError
-#include <cassert>   // for assertion about stack size
-// libclang includes
-#include <clang-c/Index.h> // for clang lexing/parsing
+#include <algorithm> // for for_each
+// local includes
+#include "cursor.h" // wrapper for libclang cursors
 
-// utility function used in closing delimiters on output
-// i literally don't remember how i came up with this but it works according to
-// the parenthesis counts (and lisp doesn't choke on it so that's cool)
-inline size_t CLOSE_DELIMS(size_t num_pops) {
-  return 2 * num_pops - 1;
-}
+namespace scb = semantic_code_browser;
 
 class ArgumentError : public std::runtime_error {
  public:
   ArgumentError(std::string str) : std::runtime_error(str) {
   }
 };
-
-/* Types of motion that can occur along the AST:
- *
- * Sibling: when the node visited is a direct sibling of the previous node.
- * Child: when the node visited is a direct child of the previous node.
- * HigherSibling: else (when the node visited is neither a sibling nor a child
- *   of the previous node)
- */
-enum class TreeMotion { Sibling, Child, HigherSibling };
 
 // validates input
 std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv);
@@ -40,20 +25,14 @@ std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv);
 std::string getClangFileName(const CXFile & file);
 std::string getDiagInfos(CXDiagnostic diag);
 std::string getFixIts(CXDiagnostic diag);
-enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
-                              CXClientData client_data);
+CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
+                         CXClientData client_data);
 
 // globals
 // name of file we're currently parsing
 std::string infile_str;
-bool do_parse_other_files(true);
-// stack we use to traverse the tree
-std::stack<CXCursor> ast_stack;
 // base translation unit for the file we're compilingx
 CXTranslationUnit * infile_ast;
-// used in traversal
-CXCursor prev_cursor;
-CXCursor prev_parent;
 
 int main(int argc, char ** argv) {
   const char * infile;
@@ -64,7 +43,7 @@ int main(int argc, char ** argv) {
     infile_str = std::string(infile);
   } catch (ArgumentError & e) {
     std::cerr << e.what() << std::endl;
-    std::cerr << "Usage: walk-ast INFILE SAME-FILE [ARGS...]" << std::endl;
+    std::cerr << "Usage: walk-ast INFILE [ARGS...]" << std::endl;
     exit(1);
   }
   CXIndex index(clang_createIndex(0, 0));
@@ -81,17 +60,10 @@ int main(int argc, char ** argv) {
     std::cerr << getDiagInfos(diag) << std::endl;
     std::cerr << getFixIts(diag) << std::endl;
   }
-  prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
-  ast_stack.push(prev_cursor);
   infile_ast = &tu;
-  std::cout << "(";
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
-  for (size_t i = 0; i < CLOSE_DELIMS(ast_stack.size()); ++i) {
-    std::cout << ")";
-  }
-  std::cout << std::endl;
 }
 
 std::string getLocation(CXSourceLocation loc) {
@@ -128,20 +100,15 @@ std::string getFixIts(CXDiagnostic diag) {
 std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv) {
   if (1 == argc) {
     throw ArgumentError("No arguments passed to program!");
-  } else if (2 == argc or
-             not std::regex_match(std::string(argv[2]), std::regex("[01]"))) {
-    throw ArgumentError("Specify 1 for SAME-FILE to parse all includes, or "
-                        "0 to parse only the given source file.");
   } else {
     std::regex allowedFileTypes("\\.(c|cpp|h|(c|h)xx|cc|C)$");
     std::string infile((std::string(argv[1])));
     if (std::regex_search(infile, allowedFileTypes)) {
       char ** ret_argv(nullptr);
       int ret_argc(0);
-      do_parse_other_files = std::string(argv[2]) == std::string("1");
-      if (3 < argc) {
-        ret_argv = argv + 3;
-        ret_argc = argc - 3;
+      if (2 < argc) {
+        ret_argv = argv + 2;
+        ret_argc = argc - 2;
       }
       return std::tuple<const char *, char **, int>(argv[1], ret_argv,
                                                     ret_argc);
@@ -161,140 +128,10 @@ std::string getClangFileName(const CXFile & file) {
   return filename;
 }
 
-std::string getFile(CXSourceLocation location) {
-  CXFile file;
-  unsigned int line = 0, col = 0, offset = 0;
-  clang_getSpellingLocation(location, &file, &line, &col, &offset);
-  return getClangFileName(file);
-}
-
-std::string unquoteForeignString(std::string s) {
-  return std::regex_replace(std::regex_replace(s, std::regex("\\\\"), "\\\\"),
-                            std::regex("\""), "\\\"");
-}
-
-std::string getExtent(CXSourceRange range, CXTranslationUnit * tup) {
-  CXToken * tokens = 0;
-  unsigned int nTokens = 0;
-  clang_tokenize(*tup, range, &tokens, &nTokens);
-  std::stringstream out;
-  for (size_t i = 0; i < nTokens; ++i) {
-    CXString cxtoken = clang_getTokenSpelling(*tup, tokens[i]);
-    out << clang_getCString(cxtoken) << " ";
-    clang_disposeString(cxtoken);
-  }
-  clang_disposeTokens(*tup, tokens, nTokens);
-  // sanitize quotes (i hate the std::regex quoting rules)
-  return "\"" + unquoteForeignString(out.str()) + "\"";
-}
-
-bool cursorEquals(CXCursor a, CXCursor b) {
-  return (a.data[1] == b.data[1] and a.data[2] == b.data[2]);
-}
-
-std::string cursorPointerStr(CXCursor c) {
-  std::stringstream ss;
-  ss << c.data[0] << "," << c.data[1] << "," << c.data[2];
-  return ss.str();
-}
-
-std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
-                                                   CXCursor current) {
-  TreeMotion retval;
-  size_t numPops = 0;
-  std::cout << std::endl
-            << current.data[0] << "," << current.data[1] << ","
-            << current.data[2];
-  if (cursorEquals(prev_cursor, parent)) {
-    retval = TreeMotion::Child;
-  } else if (cursorEquals(prev_parent, parent)) {
-    retval = TreeMotion::Sibling;
-    assert(!ast_stack.empty());
-    ast_stack.pop();
-    ++numPops;
-  } else {
-    assert(!ast_stack.empty());
-    while (not cursorEquals(parent, ast_stack.top())) {
-      ast_stack.pop();
-      ++numPops;
-      assert(!ast_stack.empty());
-    }
-    retval = TreeMotion::HigherSibling;
-  }
-  ast_stack.push(current);
-  prev_cursor = current;
-  prev_parent = parent;
-  std::string retstr;
-  switch (retval) {
-  case TreeMotion::HigherSibling:
-    retstr = "HigherSibling";
-    break;
-  case TreeMotion::Sibling:
-    retstr = "Sibling";
-    break;
-  case TreeMotion::Child:
-    retstr = "Child";
-    break;
-  default:
-    throw 1;
-  }
-  return std::tuple<TreeMotion, size_t>(retval, numPops);
-}
-
 // dumps out each element of the tree
-enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
-                              CXClientData client_data
-                              __attribute__((unused))) {
-  std::string fromFile = getFile(clang_getCursorLocation(cursor));
-  if (CXCursor_DeclRefExpr == cursor.kind) {
-    CXSourceRange cxsr = clang_getCursorReferenceNameRange(
-     cursor, CXNameRange_WantQualifier | CXNameRange_WantTemplateArgs, 0);
-    std::cout << std::endl
-              << "EXTENT!!!: " << getExtent(cxsr, infile_ast) << "|"
-              << getLocation(clang_getRangeStart(cxsr)) << ","
-              << getLocation(clang_getRangeEnd(cxsr));
-  }
-  if (do_parse_other_files or fromFile == infile_str) {
-    TreeMotion typeOfMotion;
-    size_t numPops;
-    std::tie(typeOfMotion, numPops) = getTypeOfTreeMotion(parent, cursor);
-    CXString cxcursorStr = clang_getCursorSpelling(cursor);
-    CXString cxcursorKindStr =
-     clang_getCursorKindSpelling(clang_getCursorKind(cursor));
-    if (TreeMotion::Child == typeOfMotion) {
-      std::cout << " :children" << std::endl;
-      // for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-      std::cout << " ";
-      // }
-      std::cout << "((";
-    } else if (TreeMotion::Sibling == typeOfMotion) {
-      std::cout << ")" << std::endl;
-      // for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-      std::cout << " ";
-      // }
-      std::cout << "(";
-    } else if (TreeMotion::HigherSibling == typeOfMotion) {
-      for (size_t i = 0; i < CLOSE_DELIMS(numPops); ++i) {
-        std::cout << ")";
-      }
-      std::cout << std::endl;
-      // for (size_t i = 0; i < ast_stack.size() - 1; ++i) {
-      std::cout << " ";
-      // }
-      std::cout << "(";
-    }
-    CXSourceRange extent = clang_getCursorExtent(cursor);
-    std::cout << ":name "
-              << "\"" << unquoteForeignString(clang_getCString(cxcursorStr))
-              << "\""
-              << " :type "
-              // || pipes are because types can have spaces
-              << "'|" << clang_getCString(cxcursorKindStr) << "| :file "
-              << "\"" << fromFile << "\""
-              << " :text " << getExtent(extent, infile_ast)
-              << " :extent (:range-start "
-              << getLocation(clang_getRangeStart(extent)) << " :range-end "
-              << getLocation(clang_getRangeEnd(extent)) << ")";
-  }
+CXChildVisitResult visit(CXCursor cursor,
+                         CXCursor parent __attribute__((unused)),
+                         CXClientData client_data __attribute__((unused))) {
+  scb::Cursor::InsertCursor(cursor, *infile_ast);
   return CXChildVisit_Recurse;
 }
