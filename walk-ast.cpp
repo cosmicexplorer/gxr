@@ -202,9 +202,9 @@ std::tuple<TreeMotion, size_t> getTypeOfTreeMotion(CXCursor parent,
                                                    CXCursor current) {
   TreeMotion retval;
   size_t numPops = 0;
-  std::cout << std::endl
-            << current.data[0] << "," << current.data[1] << ","
-            << current.data[2];
+  // std::cout << std::endl
+  //           << current.data[0] << "," << current.data[1] << ","
+  //           << current.data[2];
   if (cursorEquals(prev_cursor, parent)) {
     retval = TreeMotion::Child;
   } else if (cursorEquals(prev_parent, parent)) {
@@ -246,9 +246,9 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
   std::string fromFile = getFile(clang_getCursorLocation(cursor));
-  if (CXCursor_DeclRefExpr == cursor.kind) {
-    CXSourceRange cxsr = clang_getCursorReferenceNameRange(
-     cursor, CXNameRange_WantQualifier | CXNameRange_WantTemplateArgs, 0);
+  if (CXCursor_VarDecl == cursor.kind) {
+    CXSourceRange cxsr =
+     clang_getCursorExtent(clang_getCanonicalCursor(cursor));
     std::cout << std::endl
               << "EXTENT!!!: " << getExtent(cxsr, infile_ast) << "|"
               << getLocation(clang_getRangeStart(cxsr)) << ","
