@@ -1,6 +1,10 @@
 #include <iostream>
 
-int b = 3;
+#define B_VAL 3
+
+extern int b;
+
+int b = B_VAL;
 
 namespace fff {
 int a = 3;

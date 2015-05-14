@@ -246,11 +246,33 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                               CXClientData client_data
                               __attribute__((unused))) {
   std::string fromFile = getFile(clang_getCursorLocation(cursor));
-  if (CXCursor_DeclRefExpr == cursor.kind) {
+  if (CXCursor_DeclRefExpr == cursor.kind ||
+      CXCursor_MacroExpansion == cursor.kind ||
+      CXCursor_VariableRef == cursor.kind) {
     CXSourceRange cxsr =
      clang_getCursorExtent(clang_getCursorReferenced(cursor));
     std::cout << std::endl
-              << "EXTENT!!!: " << getExtent(cxsr, infile_ast) << "|"
+              << "REF: " << getExtent(cxsr, infile_ast) << "|"
+              << getLocation(clang_getRangeStart(cxsr)) << ","
+              << getLocation(clang_getRangeEnd(cxsr));
+  } else if (CXCursor_VarDecl == cursor.kind ||
+             CXCursor_FunctionDecl == cursor.kind ||
+             CXCursor_MacroDefinition == cursor.kind) {
+    CXSourceRange cxsr =
+     clang_getCursorExtent(clang_getCursorDefinition(cursor));
+    std::cout << std::endl
+              << "DEFN: " << getExtent(cxsr, infile_ast) << "|"
+              << getLocation(clang_getRangeStart(cxsr)) << ","
+              << getLocation(clang_getRangeEnd(cxsr));
+  }
+  if (CXCursor_MacroDefinition == cursor.kind ||
+      CXCursor_FunctionDecl == cursor.kind || CXCursor_VarDecl == cursor.kind ||
+      CXCursor_DeclRefExpr == cursor.kind ||
+      CXCursor_VariableRef == cursor.kind) {
+    CXSourceRange cxsr =
+     clang_getCursorExtent(clang_getCanonicalCursor(cursor));
+    std::cout << std::endl
+              << "CANON: " << getExtent(cxsr, infile_ast) << "|"
               << getLocation(clang_getRangeStart(cxsr)) << ","
               << getLocation(clang_getRangeEnd(cxsr));
   }
