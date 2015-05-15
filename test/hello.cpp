@@ -6,6 +6,10 @@
 
 extern int b;
 
+struct bbb {
+  int a;
+};
+
 int b = B_VAL;
 
 int a = 3;
@@ -13,8 +17,11 @@ int a = 3;
 using namespace fff;
 
 int main(int argc, char ** argv) {
+  bbb c;
+  c.a = 3;
   int * aptr = nullptr;
   aptr = &fff::a;
   *aptr = 2;
   std::cout << "hello world!\n\\" << fff::a << std::endl;
+  std::cout << c.a << std::endl;
 }
