@@ -10,6 +10,8 @@ struct bbb {
   int a;
 };
 
+typedef bbb ccc;
+
 int b = B_VAL;
 
 int a = 3;
@@ -17,7 +19,7 @@ int a = 3;
 using namespace fff;
 
 int main(int argc, char ** argv) {
-  bbb c;
+  ccc c;
   c.a = 3;
   int * aptr = nullptr;
   aptr = &fff::a;
