@@ -4,8 +4,9 @@
 
 namespace semantic_code_browser {
 
-std::unordered_map<std::string, Cursor *> Cursor::nodes =
- std::unordered_map<std::string, Cursor *>();
+// static data members
+std::unordered_map<const std::string, CanonicalDeclCursor *> Cursor::nodes =
+ std::unordered_map<const std::string, CanonicalDeclCursor *>();
 
 const CXCursorKind Cursor::DeclCursorKinds[] = {
  CXCursor_StructDecl, CXCursor_UnionDecl,        CXCursor_EnumDecl,
@@ -18,18 +19,13 @@ const CXCursorKind Cursor::AliasCursorKinds[] = {CXCursor_TypedefDecl};
 
 // Cursor defns
 Cursor::Cursor(CXCursor c, CXTranslationUnit & t) : cur(c), tu(t) {
+
 }
 
-Cursor * Cursor::findCanonical() {
+CanonicalDeclCursor * Cursor::findCanonical() {
 }
 
-Cursor * Cursor::findDefinition() {
-}
-
-// TODO: begin the insertion process!
-void Cursor::insertCursorIntoMap(std::string s,
-                                 Cursor * c __attribute__((unused))) {
-  std::cerr << s << std::endl;
+DefinitionDeclCursor * Cursor::findDefinition() {
 }
 
 Cursor::~Cursor() {
@@ -41,9 +37,6 @@ Cursor::~Cursor() {
       if (dec != this) {
         delete dec;
       }
-    }
-    if (def != this) {
-      delete def;
     }
     for (auto & ref : refs) {
       if (ref != this) {
@@ -64,17 +57,17 @@ CXTranslationUnit & Cursor::getTranslationUnit() {
 const Cursor * Cursor::MakeCursor(CXCursor c, CXTranslationUnit & t) {
   for (auto & declCursorKind : DeclCursorKinds) {
     if (declCursorKind == clang_getCursorKind(c)) {
-      return new DeclCursor(c, t);
+      return DeclCursor::MakeCursor(c, t);
     }
   }
   for (auto & refCursorKind : RefCursorKinds) {
     if (refCursorKind == clang_getCursorKind(c)) {
-      return new RefCursor(c, t);
+      return RefCursor::MakeCursor(c, t);
     }
   }
   for (auto & aliasCursorKind : AliasCursorKinds) {
     if (aliasCursorKind == clang_getCursorKind(c)) {
-      return new AliasCursor(c, t);
+      return AliasCursor::MakeCursor(c, t);
     }
   }
   // if it's a cursor type we don't care about, ignore
@@ -94,12 +87,12 @@ void Cursor::FreeAll() {
   nodes.clear();
 }
 
-bool Cursor::operator==(Cursor & rhs) {
+bool Cursor::operator==(const Cursor & rhs) {
   // TODO: how does this work with multiple files (translation units)? does
   // clang_equalCursors act the same? or do we have to go through some bs?
   return clang_equalCursors(cur, rhs.cur);
 }
-bool Cursor::operator!=(Cursor & rhs) {
+bool Cursor::operator!=(const Cursor & rhs) {
   return not(rhs == *this);
 }
 

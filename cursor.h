@@ -10,22 +10,38 @@
 #include <clang-c/Index.h>
 
 namespace semantic_code_browser {
+
+class Cursor;
+class DeclCursor;
+class RefCursor;
+class CanonicalDeclCursor;
+class DefinitionDeclCursor;
+class AliasCursor;
+
+class Type {
+ protected:
+  std::list<AliasCursor *> aliases;
+};
+class Value {};
+
 // root of inheritance hierarchy
 class Cursor {
  protected:
-  CXCursor cur;
-  CXTranslationUnit & tu;
+  const CXCursor cur;
+  const CXTranslationUnit & tu;
 
-  Cursor * canonical;
-  Cursor * defn;
+  const CanonicalDeclCursor * canonical;
+  const DefinitionDeclCursor * defn;
+  std::list<const DeclCursor *> decls;
+  std::list<const RefCursor *> refs;
 
-  std::list<Cursor *> decls;
-  std::list<Cursor *> refs;
+  static std::unordered_map<const std::string, const CanonicalDeclCursor *>
+   nodes;
 
-  Cursor(CXCursor, CXTranslationUnit &);
+  Cursor(const CXCursor, const CXTranslationUnit &);
 
-  Cursor * findCanonical();
-  Cursor * findDefinition();
+  const CanonicalDeclCursor * findCanonical();
+  const DefinitionDeclCursor * findDefinition();
 
   // CXCursorKind corresponding to each top-level Cursor subclass
   // declarations of variables, types, functions, fields, labels
@@ -35,14 +51,12 @@ class Cursor {
   // typedef
   static const CXCursorKind AliasCursorKinds[];
 
-  static std::unordered_map<std::string, Cursor *> nodes;
-
  public:
   virtual ~Cursor();
 
-  CXCursor & get();
+  const CXCursor & get() const;
 
-  CXTranslationUnit & getTranslationUnit();
+  const CXTranslationUnit & getTranslationUnit() const;
 
   class CursorKindNotFoundException : public std::runtime_error {
    public:
@@ -50,18 +64,17 @@ class Cursor {
     }
   };
 
-  static const Cursor * MakeCursor(CXCursor, CXTranslationUnit &);
-  static void ForEach(std::function<void(std::string, const Cursor *) >);
+  static const Cursor * MakeCursor(const CXCursor, const CXTranslationUnit &);
+  static void ForEach(std::function<void(const std::string, const Cursor *) >);
   static void FreeAll();
 
-  bool operator==(Cursor &);
-  bool operator!=(Cursor &);
+  bool operator==(const Cursor &) const;
+  bool operator!=(const Cursor &) const;
 
-  std::list<Cursor *> getDecls();
-  Cursor * getCanonical();
-  Cursor * getDefinition();
-  std::list<Cursor *> getRefs();
-  // TODO: declare all appropriate accessors here
+  std::list<const DeclCursor *> getDecls() const;
+  const CanonicalDeclCursor * getCanonical() const;
+  const DefinitionDeclCursor * getDefinition() const;
+  std::list<const RefCursor *> getRefs() const;
 };
 
 // level 1 of inheritance hierarchy
@@ -78,6 +91,18 @@ class RefCursor : public Cursor {
 class AliasCursor : public Cursor {
  protected:
   AliasCursor(CXCursor, CXTranslationUnit &);
+  std::pair<Cursor *, Cursor *> typeAlias;
 };
 
+// level 2 of inheritance hierarchy
+class CanonicalDeclCursor : public DeclCursor {
+ protected:
+  CanonicalDeclCursor(CXCursor, CXTranslationUnit &);
+}
+
+class DefinitionDeclCursor : public DeclCursor {
+ protected:
+  CanonicalDeclCursor(CXCursor, CXTranslationUnit &);
+}
+}
 #endif /* CURSOR_H */
