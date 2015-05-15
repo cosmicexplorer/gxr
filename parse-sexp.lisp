@@ -17,16 +17,19 @@
 ;;; get instream into a string, then spit it out into an object
 (defun read-output-into-obj-then-dump (instream outstream)
   (check-types #'streamp 'invalid-file-name instream outstream)
-  (write-sequence
-   (let ((obj
-          (let ((*readtable* (copy-readtable nil)))
-            (setf (readtable-case *readtable*) :preserve)
-            (read instream))))
-     (format *error-output* "~A ~A ~A~&"
-             "the root of the AST has" (length (getf obj :|children|))
-             "children")
-     (write-to-string obj))
-   outstream))
+  (sb-thread:join-thread
+   (sb-thread:make-thread
+    (lambda ()
+      (write-sequence
+       (let ((obj
+              (let ((*readtable* (copy-readtable nil)))
+                (setf (readtable-case *readtable*) :preserve)
+                (read instream))))
+         (format *error-output* "~A ~A ~A~&"
+                 "the root of the AST has" (length (getf obj :|children|))
+                 "children")
+         (write-to-string obj))
+       outstream)))))
 
 (define-condition invalid-standard-stream (error)
   ((text :initarg :text :reader text)))

@@ -14,7 +14,7 @@ LISP := sbcl
 # takes a path to $(LISP) and loads sbcl-compile.lisp which has the top-level
 # form (local-compile). the allowable succeeding arguments are detailed in
 # sbcl-compile.sh
-COMPILE_LISP := $(LISP) --control-stack-size 100000000 --noinform --non-interactive \
+COMPILE_LISP := $(LISP) --control-stack-size 1000 --noinform --non-interactive \
 	--load ./sbcl-compile.lisp --eval "(local-compile)"
 
 CXXFLAGS := -std=c++11 -Wall -Wextra -Werror -g -O0
