@@ -6,6 +6,8 @@
 
 extern int b;
 
+struct bbb;
+
 struct bbb {
   int a;
 };

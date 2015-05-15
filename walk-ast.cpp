@@ -284,11 +284,20 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
     CXString cxsTypeA = clang_getTypeSpelling(clang_getCursorType(cursor));
     CXString cxsTypeB =
      clang_getTypeSpelling(clang_getTypedefDeclUnderlyingType(cursor));
-    std::cout << std::endl << "TYPES: "
-              << clang_getCString(cxsTypeA) << "," << clang_getCString(cxsTypeB)
-              << std::endl;
+    std::cout << std::endl
+              << "TYPES: " << clang_getCString(cxsTypeA) << ","
+              << clang_getCString(cxsTypeB);
     clang_disposeString(cxsTypeA);
     clang_disposeString(cxsTypeB);
+  }
+  if (CXCursor_StructDecl == cursor.kind ||
+      CXCursor_TypedefDecl == cursor.kind) {
+    CXSourceRange canon_cxsr =
+     clang_getCursorExtent(clang_getCanonicalCursor(cursor));
+    std::cout << std::endl
+              << ",CAN: " << getExtent(canon_cxsr, infile_ast) << "|"
+              << getLocation(clang_getRangeStart(canon_cxsr)) << ","
+              << getLocation(clang_getRangeEnd(canon_cxsr));
   }
   if (do_parse_other_files or fromFile == infile_str) {
     TreeMotion typeOfMotion;
