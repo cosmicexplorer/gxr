@@ -18,12 +18,6 @@ class CanonicalDeclCursor;
 class DefinitionDeclCursor;
 class AliasCursor;
 
-class Type {
- protected:
-  std::list<AliasCursor *> aliases;
-};
-class Value {};
-
 // root of inheritance hierarchy
 class Cursor {
  protected:
