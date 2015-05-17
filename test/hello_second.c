@@ -1,3 +1,5 @@
+extern int b;
+
 #include "hello.h"
 
 int b = 3;
