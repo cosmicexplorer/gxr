@@ -300,16 +300,18 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
       CXCursor_DeclRefExpr == cursor.kind) {
     CXSourceRange cxsr =
      clang_getCursorExtent(clang_getCursorDefinition(cursor));
+    std::cout << std::endl
+              << "DEFN: " << getExtent(cxsr, infile_ast) << "|"
+              << getLocation(clang_getRangeStart(cxsr)) << ","
+              << getLocation(clang_getRangeEnd(cxsr));
+    std::cout << "|" << cxsr.ptr_data[0] << "," << cxsr.ptr_data[1] << ":"
+              << cxsr.begin_int_data << "," << cxsr.end_int_data;
     CXString usr;
     if (CXCursor_DeclRefExpr == cursor.kind) {
       usr = clang_getCursorUSR(clang_getCursorDefinition(cursor));
     } else {
       usr = clang_getCursorUSR(cursor);
     }
-    std::cout << std::endl
-              << "DEFN: " << getExtent(cxsr, infile_ast) << "|"
-              << getLocation(clang_getRangeStart(cxsr)) << ","
-              << getLocation(clang_getRangeEnd(cxsr));
     std::cout << std::endl
               << "USR: " << clang_getCString(usr);
     clang_disposeString(usr);

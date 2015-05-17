@@ -21,8 +21,9 @@ static int A = 4;
 
 #define F(x, y) x##y
 
-int b;
-int a = 3;
+int b = 3;
+
+#include "hello.h"
 
 void f() {
   int b = a;
