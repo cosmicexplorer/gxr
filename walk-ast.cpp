@@ -34,7 +34,8 @@ class ArgumentError : public std::runtime_error {
 enum class TreeMotion { Sibling, Child, HigherSibling };
 
 // validates input
-std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv);
+std::tuple<const char *, const char *, char **, int> parseArgs(int argc,
+                                                               char ** argv);
 
 // clang visitor functions
 std::string getClangFileName(const CXFile & file);
@@ -49,7 +50,7 @@ std::string infile_str;
 bool do_parse_other_files(true);
 // stack we use to traverse the tree
 std::stack<CXCursor> ast_stack;
-// base translation unit for the file we're compilingx
+// base translation unit for the file we're compiling
 CXTranslationUnit * infile_ast;
 // used in traversal
 CXCursor prev_cursor;
@@ -57,19 +58,24 @@ CXCursor prev_parent;
 
 int main(int argc, char ** argv) {
   const char * infile;
+  const char * infile2;
   char ** clangArgs;
   int numArgs;
   try {
-    std::tie(infile, clangArgs, numArgs) = parseArgs(argc, argv);
+    std::tie(infile, infile2, clangArgs, numArgs) = parseArgs(argc, argv);
     infile_str = std::string(infile);
   } catch (ArgumentError & e) {
     std::cerr << e.what() << std::endl;
-    std::cerr << "Usage: walk-ast INFILE SAME-FILE [ARGS...]" << std::endl;
+    std::cerr << "Usage: walk-ast INFILE INFILE2 SAME-FILE [ARGS...]"
+              << std::endl;
     exit(1);
   }
   CXIndex index(clang_createIndex(0, 0));
   CXTranslationUnit tu =
    clang_parseTranslationUnit(index, infile, clangArgs, numArgs, nullptr, 0,
+                              CXTranslationUnit_DetailedPreprocessingRecord);
+  CXTranslationUnit tu2 =
+   clang_parseTranslationUnit(index, infile2, clangArgs, numArgs, nullptr, 0,
                               CXTranslationUnit_DetailedPreprocessingRecord);
   int n = clang_getNumDiagnostics(tu);
   for (int i = 0; i < n; ++i) {
@@ -81,17 +87,45 @@ int main(int argc, char ** argv) {
     std::cerr << getDiagInfos(diag) << std::endl;
     std::cerr << getFixIts(diag) << std::endl;
   }
+  n = clang_getNumDiagnostics(tu2);
+  for (int i = 0; i < n; ++i) {
+    CXDiagnostic diag(clang_getDiagnostic(tu, i));
+    CXString diag_str(
+     clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions()));
+    std::cerr << clang_getCString(diag_str) << std::endl;
+    clang_disposeString(diag_str);
+    std::cerr << getDiagInfos(diag) << std::endl;
+    std::cerr << getFixIts(diag) << std::endl;
+  }
+
   prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu);
   ast_stack.push(prev_cursor);
   infile_ast = &tu;
   std::cout << "(";
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   clang_disposeTranslationUnit(tu);
-  clang_disposeIndex(index);
   for (size_t i = 0; i < CLOSE_DELIMS(ast_stack.size()); ++i) {
     std::cout << ")";
   }
   std::cout << std::endl;
+
+  std::cout << "++++++++++++++++++++++++++++++++++" << std::endl;
+
+  prev_cursor = prev_parent = clang_getTranslationUnitCursor(tu2);
+  while (!ast_stack.empty()) {
+    ast_stack.pop();
+  }
+  ast_stack.push(prev_cursor);
+  infile_ast = &tu2;
+  std::cout << "(";
+  clang_visitChildren(clang_getTranslationUnitCursor(tu2), visit, nullptr);
+  clang_disposeTranslationUnit(tu2);
+  for (size_t i = 0; i < CLOSE_DELIMS(ast_stack.size()); ++i) {
+    std::cout << ")";
+  }
+  std::cout << std::endl;
+
+  clang_disposeIndex(index);
 }
 
 std::string getLocation(CXSourceLocation loc) {
@@ -125,28 +159,32 @@ std::string getFixIts(CXDiagnostic diag) {
   return out.str();
 }
 
-std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv) {
+std::tuple<const char *, const char *, char **, int> parseArgs(int argc,
+                                                               char ** argv) {
   if (1 == argc) {
     throw ArgumentError("No arguments passed to program!");
-  } else if (2 == argc or
-             not std::regex_match(std::string(argv[2]), std::regex("[01]"))) {
+  } else if (3 == argc or
+             not std::regex_match(std::string(argv[3]), std::regex("[01]"))) {
     throw ArgumentError("Specify 1 for SAME-FILE to parse all includes, or "
                         "0 to parse only the given source file.");
   } else {
     std::regex allowedFileTypes("\\.(c|cpp|h|(c|h)xx|cc|C)$");
     std::string infile((std::string(argv[1])));
-    if (std::regex_search(infile, allowedFileTypes)) {
+    std::string infile2((std::string(argv[2])));
+    if (std::regex_search(infile, allowedFileTypes) and
+        std::regex_search(infile2, allowedFileTypes)) {
       char ** ret_argv(nullptr);
       int ret_argc(0);
-      do_parse_other_files = std::string(argv[2]) == std::string("1");
-      if (3 < argc) {
-        ret_argv = argv + 3;
-        ret_argc = argc - 3;
+      do_parse_other_files = std::string(argv[3]) == std::string("1");
+      if (4 < argc) {
+        ret_argv = argv + 4;
+        ret_argc = argc - 4;
       }
-      return std::tuple<const char *, char **, int>(argv[1], ret_argv,
-                                                    ret_argc);
+      return std::tuple<const char *, const char *, char **, int>(
+       argv[1], argv[2], ret_argv, ret_argc);
     } else {
-      throw ArgumentError("Input filetype of " + infile + " not recognized!");
+      throw ArgumentError("Input filetype of " + infile + " or " + infile2 +
+                          " not recognized!");
     }
   }
 }
@@ -255,12 +293,19 @@ enum CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
               << "REF: " << getExtent(cxsr, infile_ast) << "|"
               << getLocation(clang_getRangeStart(cxsr)) << ","
               << getLocation(clang_getRangeEnd(cxsr));
-  } else if (CXCursor_VarDecl == cursor.kind ||
-             CXCursor_FunctionDecl == cursor.kind ||
-             CXCursor_MacroDefinition == cursor.kind) {
+  }
+  if (CXCursor_VarDecl == cursor.kind || CXCursor_FunctionDecl == cursor.kind ||
+      CXCursor_MacroDefinition == cursor.kind ||
+      CXCursor_VariableRef == cursor.kind ||
+      CXCursor_DeclRefExpr == cursor.kind) {
     CXSourceRange cxsr =
      clang_getCursorExtent(clang_getCursorDefinition(cursor));
-    CXString usr = clang_getCursorUSR(cursor);
+    CXString usr;
+    if (CXCursor_DeclRefExpr == cursor.kind) {
+      usr = clang_getCursorUSR(clang_getCursorDefinition(cursor));
+    } else {
+      usr = clang_getCursorUSR(cursor);
+    }
     std::cout << std::endl
               << "DEFN: " << getExtent(cxsr, infile_ast) << "|"
               << getLocation(clang_getRangeStart(cxsr)) << ","

@@ -22,7 +22,11 @@ static int A = 4;
 #define F(x, y) x##y
 
 int b;
-int a;
+int a = 3;
+
+void f() {
+  int b = a;
+}
 
 #ifdef BBB
 int _a() {

@@ -26,9 +26,9 @@ $(AST_DRIVER): $(AST_OBJ)
 	$(CXX) $(AST_OBJ) -o $@ $(LDFLAGS)
 
 TEST_DIR := test
-TEST_C := $(TEST_DIR)/hello.c
+TEST_C := $(TEST_DIR)/hello.c $(TEST_DIR)/hello_second.c
 TEST_C_OBJ := $(TEST_DIR)/outfile-c
-TEST_CXX := $(TEST_DIR)/hello.cpp
+TEST_CXX := $(TEST_DIR)/hello.cpp $(TEST_DIR)/hello_second.cpp
 TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 
 check: check-c check-cpp
@@ -36,11 +36,13 @@ check: check-c check-cpp
 INCLUDE_ARG := -I/usr/lib/clang/3.6.0/include
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< 1 -DHEY -DWOW=3 $(INCLUDE_ARG) > $(TEST_C_OBJ)
+	./$(AST_DRIVER) $< $(word 2, $^) 1 -DHEY -DWOW=3 $(INCLUDE_ARG) > \
+	$(TEST_C_OBJ)
 check-c: $(TEST_C_OBJ)
 
 $(TEST_CXX_OBJ): $(TEST_CXX) all
-	./$(AST_DRIVER) $< 1 -std=c++14 $(INCLUDE_ARG) > $(TEST_CXX_OBJ)
+	./$(AST_DRIVER) $< $(word 2, $^) 1 -std=c++14 $(INCLUDE_ARG) > \
+	$(TEST_CXX_OBJ)
 check-cpp: $(TEST_CXX_OBJ)
 
 clean:
