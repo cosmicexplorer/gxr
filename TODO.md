@@ -8,6 +8,7 @@ TODO
 3. add struct/class member decls/refs
 4. add aliases (typedefs and pointer/reference)
 5. extend to c++ (templates, namespaces, virtual functions!)
-6. remove requirement to include clang headers, or at least automate it
+6. add client/server architecture (or something similarly easy to integrate with makefiles)
+  - remove requirement to include clang headers, or at least automate it
 7. integrate with doxygen comments
 8. produce groff or something that emacs can browse super easy (and give it links to the source so it can be used like gtags)
