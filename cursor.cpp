@@ -2,6 +2,7 @@
 #include <stdexcept>
 // local includes
 #include "cursor.hpp"
+#include "cursor-index.hpp"
 
 namespace semantic_code_browser {
 /* cursor types */
@@ -49,33 +50,33 @@ Cursor::~Cursor() {
 }
 
 /* entry point to cursor class */
-Cursor * Cursor::MakeCursor(CXCursor c, CXTranslationUnit & tu) {
+Cursor * Cursor::MakeCursor(CXCursor c) {
   for (auto & typeDeclCursorKind : TypeDeclCursorKinds) {
     if (typeDeclCursorKind == clang_getCursorKind(c)) {
       if (IsDefinition(c)) {
-        return new DefnCursor<Type>(c, tu);
+        return new DefnCursor<Type>(c);
       } else {
-        return new DeclCursor<Type>(c, tu);
+        return new DeclCursor<Type>(c);
       }
     }
   }
   for (auto & valDeclCursorKind : ValDeclCursorKinds) {
     if (valDeclCursorKind == clang_getCursorKind(c)) {
       if (IsDefinition(c)) {
-        return new DefnCursor<Value>(c, tu);
+        return new DefnCursor<Value>(c);
       } else {
-        return new DeclCursor<Value>(c, tu);
+        return new DeclCursor<Value>(c);
       }
     }
   }
   for (auto & typeRefCursorKind : TypeRefCursorKinds) {
     if (typeRefCursorKind == clang_getCursorKind(c)) {
-      return new RefCursor<Type>(c, tu);
+      return new RefCursor<Type>(c);
     }
   }
   for (auto & valRefCursorKind : ValRefCursorKinds) {
     if (valRefCursorKind == clang_getCursorKind(c)) {
-      return new RefCursor<Value>(c, tu);
+      return new RefCursor<Value>(c);
     }
   }
   // if we don't care about the kind of cursor this is pointing to
@@ -83,13 +84,13 @@ Cursor * Cursor::MakeCursor(CXCursor c, CXTranslationUnit & tu) {
 }
 
 /* constructor */
-Cursor::Cursor(CXCursor c, CXTranslationUnit & tu)
+Cursor::Cursor(CXCursor c)
    : mCursor(c),
+     mCursorKind(clang_getCursorKind(c)),
      mBegin(clang_getRangeStart(clang_getCursorExtent(c))),
      mEnd(clang_getRangeEnd(clang_getCursorExtent(c))),
      mFile(Cursor::GetFileName(mBegin)),
      mOffset(Cursor::GetOffset(mBegin)),
-     mTU(tu),
      mName(Cursor::GetStringFromCXString(clang_getCursorSpelling(c))),
      mUSR(Cursor::GetStringFromCXString(clang_getCursorUSR(c))) {
 }
@@ -99,8 +100,8 @@ const CXCursor & Cursor::get() const {
   return mCursor;
 }
 
-const CXTranslationUnit & Cursor::getTranslationUnit() const {
-  return mTU;
+const CXCursorKind & Cursor::getKind() const {
+  return mCursorKind;
 }
 
 const CXSourceLocation & Cursor::getBegin() const {
@@ -127,19 +128,30 @@ const std::string & Cursor::getUSR() const {
   return mUSR;
 }
 
+bool Cursor::operator==(Cursor & rhs) const {
+  return getUSR() == rhs.getUSR() and getFile() == rhs.getFile() and
+         getOffset() == rhs.getOffset() and getKind() == rhs.getKind();
+}
+
 /* ctors/dtors for derived classes */
 template <Specifier S>
-EntityCursor<S>::EntityCursor(CXCursor c, CXTranslationUnit & tu)
-   : Cursor(c, tu) {
+EntityCursor<S>::EntityCursor(CXCursor c)
+   : Cursor(c) {
 }
 
 template <Specifier S>
 EntityCursor<S>::~EntityCursor() {
 }
 
+/* mild form of introspection */
 template <Specifier S>
-DeclCursor<S>::DeclCursor(CXCursor c, CXTranslationUnit & tu)
-   : EntityCursor<S>(c, tu) {
+Specifier EntityCursor<S>::getSpecifier() const {
+  return S;
+}
+
+template <Specifier S>
+DeclCursor<S>::DeclCursor(CXCursor c)
+   : EntityCursor<S>(c) {
 }
 
 template <Specifier S>
@@ -147,8 +159,13 @@ DeclCursor<S>::~DeclCursor() {
 }
 
 template <Specifier S>
-RefCursor<S>::RefCursor(CXCursor c, CXTranslationUnit & tu)
-   : EntityCursor<S>(c, tu) {
+bool DeclCursor<S>::accept(EntityIndex * ei) {
+  return ei->addDecl(this);
+}
+
+template <Specifier S>
+RefCursor<S>::RefCursor(CXCursor c)
+   : EntityCursor<S>(c) {
 }
 
 template <Specifier S>
@@ -156,11 +173,21 @@ RefCursor<S>::~RefCursor() {
 }
 
 template <Specifier S>
-DefnCursor<S>::DefnCursor(CXCursor c, CXTranslationUnit & tu)
-   : DeclCursor<S>(c, tu) {
+bool RefCursor<S>::accept(EntityIndex * ei) {
+  return ei->addRef(this);
+}
+
+template <Specifier S>
+DefnCursor<S>::DefnCursor(CXCursor c)
+   : DeclCursor<S>(c) {
 }
 
 template <Specifier S>
 DefnCursor<S>::~DefnCursor() {
+}
+
+template <Specifier S>
+bool DefnCursor<S>::accept(EntityIndex * ei) {
+  return ei->addDefn(this);
 }
 }

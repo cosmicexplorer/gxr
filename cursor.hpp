@@ -7,6 +7,13 @@
 #include <clang-c/Index.h>
 
 namespace semantic_code_browser {
+class EntityIndex;
+
+/* cursor variants specification */
+// this doesn't matter now, but it will when we introduce aliases, and
+// especially when we introduce namespaces
+enum Specifier { Type, Value };
+
 class Cursor {
  protected:
   /* types of cursors used in multiplexing Cursor derived class in MakeCursor */
@@ -18,7 +25,7 @@ class Cursor {
   /* static helper methods */
   /*
     THIS DISPOSES OF THE CXSTRING AND WILL CAUSE MEMORY ERRORS IF YOU ATTEMPT
-    TO USE THE CXSTRING AFTER USING IT IN THIS FUNCTION
+    TO USE THE CXSTRING AFTER PASSING IT INTO THIS FUNCTION
   */
   static std::string GetStringFromCXString(CXString);
   static std::string GetFileName(CXSourceLocation);
@@ -26,26 +33,29 @@ class Cursor {
   static bool IsDefinition(CXCursor);
 
   /* constructor and members */
-  Cursor(CXCursor, CXTranslationUnit &);
+  Cursor(CXCursor);
 
   const CXCursor mCursor;
+  const CXCursorKind mCursorKind;
   const CXSourceLocation mBegin;
   const CXSourceLocation mEnd;
   const std::string mFile;
   const unsigned int mOffset;
-  const CXTranslationUnit & mTU;
   const std::string mName;
   const std::string mUSR;
 
  public:
   virtual ~Cursor();
 
+  /* mild form of introspection */
+  virtual Specifier getSpecifier() const = 0;
+
   /* entry point to cursor class */
-  static Cursor * MakeCursor(CXCursor, CXTranslationUnit &);
+  static Cursor * MakeCursor(CXCursor);
 
   /* simple accessors */
   const CXCursor & get() const;
-  const CXTranslationUnit & getTranslationUnit() const;
+  const CXCursorKind & getKind() const;
   const CXSourceLocation & getBegin() const;
   const CXSourceLocation & getEnd() const;
   const std::string & getFile() const;
@@ -56,57 +66,57 @@ class Cursor {
   /* more complex processing */
   /*
     One might naively assume that this calls clang_cursorEquals under the
-    covers. In fact, it does not. This
+    covers. In fact, it does not. This is meant to compare two cursors, even
+    across translation units, which I'm not certain (?) clang_cursorEquals is
+    able to do. The important point is that they refer to the same object, and
+    are at the same location.
   */
-  bool operator== (Cursor &) const;
+  bool operator==(Cursor &) const;
 
-  /*
-    A USR is what will identify our entity in the given compilation target (set
-    of source files which will all be linked together). This is useful
-    internally, but for presentation purposes, we wish to display the fully
-    qualified name of the entity, and not in the mangled form that the USR
-    presents. This is computationally complex (slightly), and will hopefully be
-    called only once per entity, so it is not backed by a data member (which
-    would require construction of the fully qualified name on each cursor
-    instantiation).
-  */
-  std::string getFullyQualifiedName() const;
+  // delegates to appropriate add* function in EntityIndex
+  // returns whether or not cursor DIDN'T already exist in index
+  virtual bool accept(EntityIndex *) = 0;
 };
-
-/* cursor variants specification */
-// this doesn't matter now, but it will when we introduce aliases, and
-// especially when we introduce namespaces
-enum Specifier { Type, Value };
 
 /* inheritance hierarchy */
 template <Specifier S>
 class EntityCursor : public Cursor {
  protected:
-  EntityCursor(CXCursor, CXTranslationUnit &);
+  EntityCursor(CXCursor);
 
  public:
   virtual ~EntityCursor();
+
+  virtual bool accept(EntityIndex *) = 0;
+
+  Specifier getSpecifier() const;
 };
 
 template <Specifier S>
 class DeclCursor : public EntityCursor<S> {
  public:
-  DeclCursor(CXCursor, CXTranslationUnit &);
+  DeclCursor(CXCursor);
   ~DeclCursor();
+
+  virtual bool accept(EntityIndex *);
 };
 
 template <Specifier S>
 class RefCursor : public EntityCursor<S> {
  public:
-  RefCursor(CXCursor, CXTranslationUnit &);
+  RefCursor(CXCursor);
   ~RefCursor();
+
+  virtual bool accept(EntityIndex *);
 };
 
 template <Specifier S>
 class DefnCursor : public DeclCursor<S> {
  public:
-  DefnCursor(CXCursor, CXTranslationUnit &);
+  DefnCursor(CXCursor);
   ~DefnCursor();
+
+  virtual bool accept(EntityIndex *);
 };
 }
 #endif /* CURSOR_HPP */

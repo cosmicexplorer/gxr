@@ -134,7 +134,6 @@ std::string getClangFileName(const CXFile & file) {
 CXChildVisitResult visit(CXCursor cursor,
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {
-  scb::Cursor * c = scb::Cursor::MakeCursor(cursor, *infile_ast);
-  delete c;
+  scb::Cursor * c __attribute__((unused)) = scb::Cursor::MakeCursor(cursor);
   return CXChildVisit_Recurse;
 }
