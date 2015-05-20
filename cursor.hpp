@@ -2,7 +2,7 @@
 #define CURSOR_HPP
 
 // std includes
-#include <tuple>
+#include <list>
 // external includes
 #include <clang-c/Index.h>
 
@@ -14,6 +14,8 @@ class EntityIndex;
 // especially when we introduce namespaces
 enum Specifier { Type, Value };
 
+enum ScopeSpecifier { Function };
+
 class Cursor {
  protected:
   /* types of cursors used in multiplexing Cursor derived class in MakeCursor */
@@ -21,6 +23,7 @@ class Cursor {
   static const CXCursorKind ValDeclCursorKinds[];
   static const CXCursorKind TypeRefCursorKinds[];
   static const CXCursorKind ValRefCursorKinds[];
+  static const CXCursorKind ScopeCursorKinds[];
 
   /* static helper methods */
   /*
@@ -32,8 +35,15 @@ class Cursor {
   static unsigned int GetOffset(CXSourceLocation);
   static bool IsDefinition(CXCursor);
 
+  /* used in constructing names for anonymous classes and types */
+  static size_t AnonymousCounter;
+  static std::string GetName(CXCursor);
+  static std::string GetUSR(CXCursor);
+
   /* constructor and members */
   Cursor(CXCursor);
+  // for constructing anonymous types (generating unique id)
+  Cursor(CXCursor, size_t);
 
   const CXCursor mCursor;
   const CXCursorKind mCursorKind;
@@ -63,6 +73,11 @@ class Cursor {
   const std::string & getName() const;
   const std::string & getUSR() const;
 
+  /* debugging */
+  virtual std::string getDerivedType() const;
+  static std::string ConvertSpecifier(Specifier s);
+  std::string toString() const;
+
   /* more complex processing */
   /*
     One might naively assume that this calls clang_cursorEquals under the
@@ -72,6 +87,8 @@ class Cursor {
     are at the same location.
   */
   bool operator==(Cursor &) const;
+  // da bomb
+  static std::list<CXCursor> GetEnclosingScope(CXCursor);
 
   // delegates to appropriate add* function in EntityIndex
   // returns whether or not cursor DIDN'T already exist in index
@@ -89,6 +106,8 @@ class EntityCursor : public Cursor {
 
   virtual bool accept(EntityIndex *) = 0;
 
+  virtual std::string getDerivedType() const;
+
   Specifier getSpecifier() const;
 };
 
@@ -99,6 +118,8 @@ class DeclCursor : public EntityCursor<S> {
   ~DeclCursor();
 
   virtual bool accept(EntityIndex *);
+
+  virtual std::string getDerivedType() const;
 };
 
 template <Specifier S>
@@ -108,6 +129,8 @@ class RefCursor : public EntityCursor<S> {
   ~RefCursor();
 
   virtual bool accept(EntityIndex *);
+
+  virtual std::string getDerivedType() const;
 };
 
 template <Specifier S>
@@ -117,6 +140,8 @@ class DefnCursor : public DeclCursor<S> {
   ~DefnCursor();
 
   virtual bool accept(EntityIndex *);
+
+  virtual std::string getDerivedType() const;
 };
 }
 #endif /* CURSOR_HPP */

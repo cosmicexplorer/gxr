@@ -15,7 +15,7 @@ int ___a() {
 
 static int A = 4;
 
-#include <stdio.h>
+/* #include <stdio.h> */
 
 #define A 3
 
@@ -52,11 +52,12 @@ void _b() {
 int main();
 
 int main() {
-  int * F(a, ptr) = NULL;
+  /* int * F(a, ptr) = NULL; */
+  int * F(a, ptr) = 0;
   aptr = &a;
   *aptr = A;
   b = _a();
 #undef A
   int c = A;
-  printf("%d\n", a);
+  /* printf("%d\n", a); */
 }

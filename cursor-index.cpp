@@ -1,5 +1,6 @@
 // std includes
 #include <cassert>
+#include <iostream>
 // local includes
 #include "cursor-index.hpp"
 
@@ -28,10 +29,10 @@ EntityIndex::EntityIndex() {
 EntityIndex::~EntityIndex() {
 }
 
-EntityIndex * EntityIndex::MakeEntityIndex(const Specifier S) {
-  if (Type == S) {
+EntityIndex * EntityIndex::MakeEntityIndex(Specifier s) {
+  if (Type == s) {
     return new TypedEntityIndex<Type>();
-  } else if (Value == S) {
+  } else if (Value == s) {
     return new TypedEntityIndex<Value>();
   } else {
     return nullptr;
@@ -57,8 +58,13 @@ TypedEntityIndex<S>::~TypedEntityIndex() {
 }
 
 template <Specifier S>
+size_t TypedEntityIndex<S>::getSetSize() const {
+  return mMemberSet.size();
+}
+
+template <Specifier S>
 bool TypedEntityIndex<S>::addDecl(Cursor * c) {
-  // FIXME: dynamic_cast here sucks, annoying, fix
+  std::cerr << "attempted spec: " << Cursor::ConvertSpecifier(S) << std::endl;
   auto dcl(dynamic_cast<DeclCursor<S> *>(c));
   assert(nullptr != dcl);
   if (!existsAndInserts(dcl)) {
@@ -71,6 +77,7 @@ bool TypedEntityIndex<S>::addDecl(Cursor * c) {
 
 template <Specifier S>
 bool TypedEntityIndex<S>::addRef(Cursor * c) {
+  std::cerr << "attempted spec: " << Cursor::ConvertSpecifier(S) << std::endl;
   auto ref(dynamic_cast<RefCursor<S> *>(c));
   assert(nullptr != ref);
   if (!existsAndInserts(ref)) {
@@ -83,6 +90,7 @@ bool TypedEntityIndex<S>::addRef(Cursor * c) {
 
 template <Specifier S>
 bool TypedEntityIndex<S>::addDefn(Cursor * c) {
+  std::cerr << "attempted spec: " << Cursor::ConvertSpecifier(S) << std::endl;
   auto dfn(dynamic_cast<DefnCursor<S> *>(c));
   assert(nullptr != dfn);
   if (!existsAndInserts(dfn)) {
@@ -102,17 +110,27 @@ CursorIndex::~CursorIndex() {
   }
 }
 
+size_t CursorIndex::getMapSize() const {
+  return mEntityMap.size();
+}
+
 void CursorIndex::insert(Cursor * c) {
   if (nullptr == c) {
+    std::cerr << "null??" << std::endl;
     return;
   }
+  std::cerr << c->toString() << std::endl;
   const std::string & usr = c->getUSR();
   auto entityIterator(mEntityMap.find(usr));
   // if not in hash map already
   if (mEntityMap.end() == entityIterator) {
+    std::cerr << "new entry in hash map: size == " << getMapSize() << std::endl;
     entityIterator =
      mEntityMap.emplace(usr, EntityIndex::MakeEntityIndex(c->getSpecifier()))
       .first;
+  } else {
+    std::cerr << "NOT new entry in hash map: size == " << getMapSize()
+              << std::endl;
   }
   if (!c->accept(entityIterator->second)) {
     delete c;

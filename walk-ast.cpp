@@ -30,10 +30,8 @@ CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                          CXClientData client_data);
 
 // globals
-// name of file we're currently parsing
-std::string infile_str;
-// base translation unit for the file we're compilingx
-CXTranslationUnit * infile_ast;
+std::function<CXChildVisitResult(CXCursor, CXCursor, CXClientData)>
+ globalLambda;
 
 int main(int argc, char ** argv) {
   const char * infile;
@@ -41,7 +39,6 @@ int main(int argc, char ** argv) {
   int numArgs;
   try {
     std::tie(infile, clangArgs, numArgs) = parseArgs(argc, argv);
-    infile_str = std::string(infile);
   } catch (ArgumentError & e) {
     std::cerr << e.what() << std::endl;
     std::cerr << "Usage: walk-ast INFILE [ARGS...]" << std::endl;
@@ -62,10 +59,16 @@ int main(int argc, char ** argv) {
     std::cerr << getFixIts(diag) << std::endl;
     clang_disposeDiagnostic(diag);
   }
-  infile_ast = &tu;
+  scb::CursorIndex myIndex;
+  globalLambda =
+   [&](CXCursor cursor, CXCursor, CXClientData) -> CXChildVisitResult {
+     myIndex.insert(scb::Cursor::MakeCursor(cursor));
+     return CXChildVisit_Recurse;
+   };
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
+  return 0;
 }
 
 std::string getLocation(CXSourceLocation loc) {
@@ -134,6 +137,5 @@ std::string getClangFileName(const CXFile & file) {
 CXChildVisitResult visit(CXCursor cursor,
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {
-  scb::Cursor * c __attribute__((unused)) = scb::Cursor::MakeCursor(cursor);
-  return CXChildVisit_Recurse;
+  return globalLambda(cursor, parent, client_data);
 }

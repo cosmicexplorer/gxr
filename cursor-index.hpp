@@ -24,6 +24,9 @@ class EntityIndex {
  public:
   virtual ~EntityIndex();
 
+  /* debugging */
+  virtual size_t getSetSize() const = 0;
+
   static EntityIndex * MakeEntityIndex(Specifier);
 
   virtual bool addDecl(Cursor *) = 0;
@@ -46,6 +49,8 @@ struct TypedEntityIndex : public EntityIndex {
   TypedEntityIndex();
   ~TypedEntityIndex();
 
+  size_t getSetSize() const;
+
   bool addDecl(Cursor *);
   bool addRef(Cursor *);
   bool addDefn(Cursor *);
@@ -58,6 +63,9 @@ class CursorIndex {
  public:
   CursorIndex();
   ~CursorIndex();
+
+  /* debugging */
+  size_t getMapSize() const;
 
   /*
      performs double dispatch from cursor::accept to call appropriate add* in
