@@ -51,6 +51,9 @@ TypedEntityIndex<S>::TypedEntityIndex()
 
 template <Specifier S>
 TypedEntityIndex<S>::~TypedEntityIndex() {
+  for (auto & entry : mMemberSet) {
+    delete entry;
+  }
 }
 
 template <Specifier S>
@@ -87,6 +90,15 @@ bool TypedEntityIndex<S>::addDefn(Cursor * c) {
     return true;
   } else {
     return false;
+  }
+}
+
+CursorIndex::CursorIndex() : mEntityMap() {
+}
+
+CursorIndex::~CursorIndex() {
+  for (auto & entry : mEntityMap) {
+    delete entry.second;
   }
 }
 

@@ -53,17 +53,16 @@ struct TypedEntityIndex : public EntityIndex {
 
 class CursorIndex {
  protected:
-  CursorIndex();
-
   std::unordered_map<std::string, EntityIndex *> mEntityMap;
 
  public:
-  static CursorIndex * MakeCursorIndex();
+  CursorIndex();
+  ~CursorIndex();
 
   /*
      performs double dispatch from cursor::accept to call appropriate add* in
      EntityIndex. WARNING: DELETES CURSOR GIVEN IF EQUAL CURSOR ALREADY PRESENT
-     IN INDEX.
+     IN INDEX. why? it simplifies the api.
   */
   void insert(Cursor *);
 };
