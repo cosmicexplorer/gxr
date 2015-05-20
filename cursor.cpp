@@ -1,3 +1,6 @@
+// std includes
+#include <stdexcept>
+// local includes
 #include "cursor.hpp"
 
 namespace semantic_code_browser {
@@ -18,6 +21,29 @@ std::string Cursor::GetStringFromCXString(CXString cxs) {
   return ret;
 }
 
+/*
+   OPTIMIZATION:
+   factor GetFileName and GetOffset into same method and perform initialization
+   in ctor. also do this for the initialization of begin and end.
+*/
+std::string Cursor::GetFileName(CXSourceLocation cxsl) {
+  CXFile file;
+  unsigned int line, col, offset;
+  clang_getSpellingLocation(cxsl, &file, &line, &col, &offset);
+  return GetStringFromCXString(clang_getFileName(file));
+}
+
+unsigned int Cursor::GetOffset(CXSourceLocation cxsl) {
+  CXFile file;
+  unsigned int line, col, offset;
+  clang_getSpellingLocation(cxsl, &file, &line, &col, &offset);
+  return offset;
+}
+
+bool Cursor::IsDefinition(CXCursor c) {
+  return clang_isCursorDefinition(c);
+}
+
 /* pointless virtual dtor */
 Cursor::~Cursor() {
 }
@@ -26,12 +52,20 @@ Cursor::~Cursor() {
 Cursor * Cursor::MakeCursor(CXCursor c, CXTranslationUnit & tu) {
   for (auto & typeDeclCursorKind : TypeDeclCursorKinds) {
     if (typeDeclCursorKind == clang_getCursorKind(c)) {
-      return new DeclCursor<Type>(c, tu);
+      if (IsDefinition(c)) {
+        return new DefnCursor<Type>(c, tu);
+      } else {
+        return new DeclCursor<Type>(c, tu);
+      }
     }
   }
   for (auto & valDeclCursorKind : ValDeclCursorKinds) {
     if (valDeclCursorKind == clang_getCursorKind(c)) {
-      return new DeclCursor<Value>(c, tu);
+      if (IsDefinition(c)) {
+        return new DefnCursor<Value>(c, tu);
+      } else {
+        return new DeclCursor<Value>(c, tu);
+      }
     }
   }
   for (auto & typeRefCursorKind : TypeRefCursorKinds) {
@@ -53,25 +87,44 @@ Cursor::Cursor(CXCursor c, CXTranslationUnit & tu)
    : mCursor(c),
      mBegin(clang_getRangeStart(clang_getCursorExtent(c))),
      mEnd(clang_getRangeEnd(clang_getCursorExtent(c))),
+     mFile(Cursor::GetFileName(mBegin)),
+     mOffset(Cursor::GetOffset(mBegin)),
      mTU(tu),
-     mName(Cursor::GetStringFromCXString(clang_getCursorSpelling(c))) {
+     mName(Cursor::GetStringFromCXString(clang_getCursorSpelling(c))),
+     mUSR(Cursor::GetStringFromCXString(clang_getCursorUSR(c))) {
 }
 
 /* simple accessors */
-const CXCursor & Cursor::get() {
+const CXCursor & Cursor::get() const {
   return mCursor;
 }
 
-const CXTranslationUnit & Cursor::getTranslationUnit() {
+const CXTranslationUnit & Cursor::getTranslationUnit() const {
   return mTU;
 }
 
-const CXSourceLocation & Cursor::getBegin() {
+const CXSourceLocation & Cursor::getBegin() const {
   return mBegin;
 }
 
-const CXSourceLocation & Cursor::getEnd() {
+const CXSourceLocation & Cursor::getEnd() const {
   return mEnd;
+}
+
+const std::string & Cursor::getFile() const {
+  return mFile;
+}
+
+const unsigned int & Cursor::getOffset() const {
+  return mOffset;
+}
+
+const std::string & Cursor::getName() const {
+  return mName;
+}
+
+const std::string & Cursor::getUSR() const {
+  return mUSR;
 }
 
 /* ctors/dtors for derived classes */
@@ -100,5 +153,14 @@ RefCursor<S>::RefCursor(CXCursor c, CXTranslationUnit & tu)
 
 template <Specifier S>
 RefCursor<S>::~RefCursor() {
+}
+
+template <Specifier S>
+DefnCursor<S>::DefnCursor(CXCursor c, CXTranslationUnit & tu)
+   : DeclCursor<S>(c, tu) {
+}
+
+template <Specifier S>
+DefnCursor<S>::~DefnCursor() {
 }
 }

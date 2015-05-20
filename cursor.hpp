@@ -21,6 +21,9 @@ class Cursor {
     TO USE THE CXSTRING AFTER USING IT IN THIS FUNCTION
   */
   static std::string GetStringFromCXString(CXString);
+  static std::string GetFileName(CXSourceLocation);
+  static unsigned int GetOffset(CXSourceLocation);
+  static bool IsDefinition(CXCursor);
 
   /* constructor and members */
   Cursor(CXCursor, CXTranslationUnit &);
@@ -28,8 +31,11 @@ class Cursor {
   const CXCursor mCursor;
   const CXSourceLocation mBegin;
   const CXSourceLocation mEnd;
+  const std::string mFile;
+  const unsigned int mOffset;
   const CXTranslationUnit & mTU;
   const std::string mName;
+  const std::string mUSR;
 
  public:
   virtual ~Cursor();
@@ -38,11 +44,33 @@ class Cursor {
   static Cursor * MakeCursor(CXCursor, CXTranslationUnit &);
 
   /* simple accessors */
-  const CXCursor & get();
-  const CXTranslationUnit & getTranslationUnit();
-  const CXSourceLocation & getBegin();
-  const CXSourceLocation & getEnd();
-  const std::string & getName();
+  const CXCursor & get() const;
+  const CXTranslationUnit & getTranslationUnit() const;
+  const CXSourceLocation & getBegin() const;
+  const CXSourceLocation & getEnd() const;
+  const std::string & getFile() const;
+  const unsigned int & getOffset() const;
+  const std::string & getName() const;
+  const std::string & getUSR() const;
+
+  /* more complex processing */
+  /*
+    One might naively assume that this calls clang_cursorEquals under the
+    covers. In fact, it does not. This
+  */
+  bool operator== (Cursor &) const;
+
+  /*
+    A USR is what will identify our entity in the given compilation target (set
+    of source files which will all be linked together). This is useful
+    internally, but for presentation purposes, we wish to display the fully
+    qualified name of the entity, and not in the mangled form that the USR
+    presents. This is computationally complex (slightly), and will hopefully be
+    called only once per entity, so it is not backed by a data member (which
+    would require construction of the fully qualified name on each cursor
+    instantiation).
+  */
+  std::string getFullyQualifiedName() const;
 };
 
 /* cursor variants specification */
@@ -72,6 +100,13 @@ class RefCursor : public EntityCursor<S> {
  public:
   RefCursor(CXCursor, CXTranslationUnit &);
   ~RefCursor();
+};
+
+template <Specifier S>
+class DefnCursor : public DeclCursor<S> {
+ public:
+  DefnCursor(CXCursor, CXTranslationUnit &);
+  ~DefnCursor();
 };
 }
 #endif /* CURSOR_HPP */

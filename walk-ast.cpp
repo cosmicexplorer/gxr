@@ -60,6 +60,7 @@ int main(int argc, char ** argv) {
     clang_disposeString(diag_str);
     std::cerr << getDiagInfos(diag) << std::endl;
     std::cerr << getFixIts(diag) << std::endl;
+    clang_disposeDiagnostic(diag);
   }
   infile_ast = &tu;
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
@@ -133,7 +134,7 @@ std::string getClangFileName(const CXFile & file) {
 CXChildVisitResult visit(CXCursor cursor,
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {
-  scb::Cursor * c __attribute__((unused)) =
-   scb::Cursor::MakeCursor(cursor, *infile_ast);
+  scb::Cursor * c = scb::Cursor::MakeCursor(cursor, *infile_ast);
+  delete c;
   return CXChildVisit_Recurse;
 }
