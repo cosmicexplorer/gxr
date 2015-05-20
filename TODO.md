@@ -8,6 +8,8 @@ TODO
 3. add struct/class member decls/refs
 4. add conditional compilation support
 5. add aliases (typedefs and pointer/reference (the pointer/reference thing could be super cool!!!!!))
+6. add labelstmt and labelref to decls/refs
+  - don't think there's an alias analogy; unless multiple labels go to the same place (lol)
 6. extend to c++ (templates, namespaces, virtual functions!)
 7. add client/server architecture (or something similarly easy to integrate with makefiles)
   - remove requirement to include clang headers, or at least automate it

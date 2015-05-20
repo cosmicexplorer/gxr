@@ -8,7 +8,7 @@
 #include <stdexcept> // for ArgumentError
 #include <algorithm> // for for_each
 // local includes
-#include "cursor.h" // wrapper for libclang cursors
+#include "cursor.hpp" // wrapper for libclang cursors
 
 namespace scb = semantic_code_browser;
 
@@ -132,6 +132,7 @@ std::string getClangFileName(const CXFile & file) {
 CXChildVisitResult visit(CXCursor cursor,
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {
-  scb::Cursor::InsertCursor(cursor, *infile_ast);
+  scb::Cursor * c __attribute__((unused)) =
+   scb::Cursor::MakeCursor(cursor, *infile_ast);
   return CXChildVisit_Recurse;
 }
