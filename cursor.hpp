@@ -1,5 +1,5 @@
-#ifndef CURSOR_H
-#define CURSOR_H
+#ifndef CURSOR_HPP
+#define CURSOR_HPP
 
 // std includes
 #include <tuple>
@@ -74,4 +74,4 @@ class RefCursor : public EntityCursor<S> {
   ~RefCursor();
 };
 }
-#endif /* CURSOR_H */
+#endif /* CURSOR_HPP */

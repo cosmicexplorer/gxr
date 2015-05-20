@@ -8,7 +8,8 @@
 #include <stdexcept> // for ArgumentError
 #include <algorithm> // for for_each
 // local includes
-#include "cursor.hpp" // wrapper for libclang cursors
+#include "cursor.hpp"       // wrapper for libclang cursors
+#include "cursor-index.hpp" // wrapper for own form of ast index
 
 namespace scb = semantic_code_browser;
 
