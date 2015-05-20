@@ -72,6 +72,7 @@ class Cursor {
   const unsigned int & getOffset() const;
   const std::string & getName() const;
   const std::string & getUSR() const;
+  bool isAnon() const;
 
   /* debugging */
   virtual std::string getDerivedType() const;

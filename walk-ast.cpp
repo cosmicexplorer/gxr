@@ -66,6 +66,7 @@ int main(int argc, char ** argv) {
      return CXChildVisit_Recurse;
    };
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
+  std::cerr << myIndex.displayContents();
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
   return 0;

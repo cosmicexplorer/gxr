@@ -4,22 +4,34 @@
 // std includes
 #include <set>
 #include <unordered_set>
-#include <unordered_map>
+#include <functional>
 // local includes
 #include "cursor.hpp"
 
 namespace semantic_code_browser {
 struct CursorHasher {
-  size_t operator()(const Cursor * c) const;
+  size_t operator()(const Cursor *) const;
 };
 
 struct CursorLocationComparer {
-  bool operator()(const Cursor * lhs, const Cursor * rhs) const;
+  bool operator()(const Cursor *, const Cursor *) const;
 };
+
+// FIXME: remove this and add a real interface!
+class CursorIndex;
 
 class EntityIndex {
  protected:
-  EntityIndex();
+  friend class CursorIndex;
+
+  EntityIndex(Cursor *);
+
+  Cursor * mTypicalCursor;
+
+  // FIXME: remove these and add a real interface!
+  virtual void forEachDecl(std::function<void(Cursor *) >) = 0;
+  virtual void forEachRef(std::function<void(Cursor *) >) = 0;
+  virtual void forEachDefn(std::function<void(Cursor *) >) = 0;
 
  public:
   virtual ~EntityIndex();
@@ -27,7 +39,12 @@ class EntityIndex {
   /* debugging */
   virtual size_t getSetSize() const = 0;
 
-  static EntityIndex * MakeEntityIndex(Specifier);
+  static EntityIndex * MakeEntityIndex(Cursor *);
+
+  bool isAnon() const;
+  std::string getName() const;
+  std::string getUSR() const;
+  const Cursor * getTypicalCursor() const;
 
   virtual bool addDecl(Cursor *) = 0;
   virtual bool addRef(Cursor *) = 0;
@@ -45,8 +62,12 @@ struct TypedEntityIndex : public EntityIndex {
   std::set<RefCursor<S> *, CursorLocationComparer> mRefSet;
   std::set<DefnCursor<S> *, CursorLocationComparer> mDefnSet;
 
+  void forEachDecl(std::function<void(Cursor *) >);
+  void forEachRef(std::function<void(Cursor *) >);
+  void forEachDefn(std::function<void(Cursor *) >);
+
  public:
-  TypedEntityIndex();
+  TypedEntityIndex(Cursor *);
   ~TypedEntityIndex();
 
   size_t getSetSize() const;
@@ -56,16 +77,21 @@ struct TypedEntityIndex : public EntityIndex {
   bool addDefn(Cursor *);
 };
 
+struct EntityHasher {
+  size_t operator()(const EntityIndex *) const;
+};
+
 class CursorIndex {
  protected:
-  std::unordered_map<std::string, EntityIndex *> mEntityMap;
+  std::unordered_set<EntityIndex *, EntityHasher> mEntitySet;
 
  public:
   CursorIndex();
   ~CursorIndex();
 
   /* debugging */
-  size_t getMapSize() const;
+  size_t getSetSize() const;
+  std::string displayContents() const;
 
   /*
      performs double dispatch from cursor::accept to call appropriate add* in

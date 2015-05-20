@@ -1,6 +1,7 @@
 // std includes
 #include <cassert>
 #include <iostream>
+#include <sstream>
 // local includes
 #include "cursor-index.hpp"
 
@@ -23,20 +24,38 @@ bool CursorLocationComparer::operator()(const Cursor * lhs,
   }
 }
 
-EntityIndex::EntityIndex() {
+EntityIndex::EntityIndex(Cursor * typicalCursor)
+   : mTypicalCursor(typicalCursor) {
 }
 
 EntityIndex::~EntityIndex() {
 }
 
-EntityIndex * EntityIndex::MakeEntityIndex(Specifier s) {
+EntityIndex * EntityIndex::MakeEntityIndex(Cursor * c) {
+  Specifier s = c->getSpecifier();
   if (Type == s) {
-    return new TypedEntityIndex<Type>();
+    return new TypedEntityIndex<Type>(c);
   } else if (Value == s) {
-    return new TypedEntityIndex<Value>();
+    return new TypedEntityIndex<Value>(c);
   } else {
     return nullptr;
   }
+}
+
+bool EntityIndex::isAnon() const {
+  return mTypicalCursor->isAnon();
+}
+
+std::string EntityIndex::getName() const {
+  return mTypicalCursor->getName();
+}
+
+std::string EntityIndex::getUSR() const {
+  return mTypicalCursor->getUSR();
+}
+
+const Cursor * EntityIndex::getTypicalCursor() const {
+  return mTypicalCursor;
 }
 
 template <Specifier S>
@@ -46,8 +65,29 @@ bool TypedEntityIndex<S>::existsAndInserts(EntityCursor<S> * e) {
 }
 
 template <Specifier S>
-TypedEntityIndex<S>::TypedEntityIndex()
-   : EntityIndex(), mMemberSet(), mDeclSet(), mRefSet(), mDefnSet() {
+void TypedEntityIndex<S>::forEachDecl(std::function<void(Cursor *) > f) {
+  for (auto & entry : mDeclSet) {
+    f(entry);
+  }
+}
+
+template <Specifier S>
+void TypedEntityIndex<S>::forEachRef(std::function<void(Cursor *) > f) {
+  for (auto & entry : mRefSet) {
+    f(entry);
+  }
+}
+
+template <Specifier S>
+void TypedEntityIndex<S>::forEachDefn(std::function<void(Cursor *) > f) {
+  for (auto & entry : mDefnSet) {
+    f(entry);
+  }
+}
+
+template <Specifier S>
+TypedEntityIndex<S>::TypedEntityIndex(Cursor * c)
+   : EntityIndex(c), mMemberSet(), mDeclSet(), mRefSet(), mDefnSet() {
 }
 
 template <Specifier S>
@@ -101,38 +141,62 @@ bool TypedEntityIndex<S>::addDefn(Cursor * c) {
   }
 }
 
-CursorIndex::CursorIndex() : mEntityMap() {
+size_t EntityHasher::operator()(const EntityIndex * ei) const {
+  return ei->isAnon() ? CursorHasher()(ei->getTypicalCursor())
+                      : std::hash<std::string>()(ei->getUSR());
+}
+
+CursorIndex::CursorIndex() : mEntitySet() {
 }
 
 CursorIndex::~CursorIndex() {
-  for (auto & entry : mEntityMap) {
-    delete entry.second;
-  }
+  // FIXME: deletion causes segfaults!!!
+  // for (auto & entry : mEntitySet) {
+  //   delete entry;
+  // }
 }
 
-size_t CursorIndex::getMapSize() const {
-  return mEntityMap.size();
+size_t CursorIndex::getSetSize() const {
+  return mEntitySet.size();
+}
+
+std::string CursorIndex::displayContents() const {
+  std::stringstream ss;
+  for (EntityIndex * entry : mEntitySet) {
+    ss << (entry->isAnon() ? std::string("<ANON>") : entry->getName()) + ":"
+       << std::endl;
+    ss << "DECLS: {" << std::endl;
+    std::function<void(Cursor *) > f(
+     [&](Cursor * c) { ss << "\t" << c->toString() << std::endl; });
+    entry->forEachDecl(f);
+    ss << "}" << std::endl
+       << "REFS: {" << std::endl;
+    entry->forEachRef(f);
+    ss << "}" << std::endl
+       << "DEFNS: {" << std::endl;
+    entry->forEachDefn(f);
+    ss << "}" << std::endl;
+  }
+  return ss.str();
 }
 
 void CursorIndex::insert(Cursor * c) {
   if (nullptr == c) {
-    std::cerr << "null??" << std::endl;
     return;
   }
   std::cerr << c->toString() << std::endl;
-  const std::string & usr = c->getUSR();
-  auto entityIterator(mEntityMap.find(usr));
+  EntityIndex * ei(EntityIndex::MakeEntityIndex(c));
+  auto entityIterator(mEntitySet.find(ei));
   // if not in hash map already
-  if (mEntityMap.end() == entityIterator) {
-    std::cerr << "new entry in hash map: size == " << getMapSize() << std::endl;
-    entityIterator =
-     mEntityMap.emplace(usr, EntityIndex::MakeEntityIndex(c->getSpecifier()))
-      .first;
+  if (mEntitySet.end() == entityIterator) {
+    std::cerr << "new entry in hash set: size == " << getSetSize() << std::endl;
+    entityIterator = mEntitySet.emplace(ei).first;
   } else {
-    std::cerr << "NOT new entry in hash map: size == " << getMapSize()
+    delete ei;
+    std::cerr << "NOT new entry in hash set: size == " << getSetSize()
               << std::endl;
   }
-  if (!c->accept(entityIterator->second)) {
+  if (!c->accept(*entityIterator)) {
     delete c;
   }
 }

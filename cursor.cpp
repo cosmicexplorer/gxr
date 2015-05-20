@@ -50,41 +50,15 @@ bool Cursor::IsDefinition(CXCursor c) {
 size_t Cursor::AnonymousCounter = 0;
 
 std::string Cursor::GetName(CXCursor c) {
-  std::string res(Cursor::GetStringFromCXString(clang_getCursorSpelling(
+  return Cursor::GetStringFromCXString(clang_getCursorSpelling(
    clang_isReference(clang_getCursorKind(c)) ? clang_getCursorReferenced(c)
-                                             : c)));
-  if (res != "") {
-    return res;
-  } else {
-    return "<ANON>" + std::to_string(AnonymousCounter++);
-  }
+                                             : c));
 }
 
 std::string Cursor::GetUSR(CXCursor c) {
-  std::string res;
-  (Cursor::GetStringFromCXString(clang_getCursorUSR(
+  return Cursor::GetStringFromCXString(clang_getCursorUSR(
    clang_isReference(clang_getCursorKind(c)) ? clang_getCursorReferenced(c)
-                                             : c)));
-  if (res != "") {
-    return res;
-  } else {
-    std::list<CXCursor> enclosingScope(Cursor::GetEnclosingScope(c));
-    std::list<std::string> scopeStrings;
-    std::transform(enclosingScope.begin(), enclosingScope.end(),
-                   std::back_inserter(scopeStrings), [](CXCursor _c) {
-                     CXString cxs(clang_getCursorSpelling(_c));
-                     std::string s(clang_getCString(cxs));
-                     clang_disposeString(cxs);
-                     return s;
-                   });
-    std::string retstr;
-    for (auto & scopestr : scopeStrings) {
-      retstr += scopestr + "::";
-    }
-    // if we get here, we will have already incremented AnonymousCounter in
-    // GetName
-    return retstr + "<ANON>" + std::to_string(AnonymousCounter++);
-  }
+                                             : c));
 }
 
 std::list<CXCursor> Cursor::GetEnclosingScope(CXCursor c) {
@@ -201,6 +175,10 @@ const std::string & Cursor::getName() const {
 
 const std::string & Cursor::getUSR() const {
   return mUSR;
+}
+
+bool Cursor::isAnon() const {
+  return mName == "";
 }
 
 std::string Cursor::getDerivedType() const {

@@ -42,12 +42,12 @@ int _a() {
 
 extern int AAAAAA;
 int AAAAAA = 3;
-struct q {
-  int b;
-};
-void _b() {
-  struct q BBBBBB = {.b = AAAAAA};
-}
+/* struct q { */
+/*   int b; */
+/* }; */
+/* void _b() { */
+/*   struct q BBBBBB = {.b = AAAAAA}; */
+/* } */
 
 int main();
 
