@@ -197,7 +197,7 @@ void CursorIndex::insert(Cursor * c) {
               << std::endl;
   }
   if (!c->accept(*entityIterator)) {
-    delete c;
+    // delete c;
   }
 }
 }
