@@ -60,11 +60,10 @@ int main(int argc, char ** argv) {
     clang_disposeDiagnostic(diag);
   }
   scb::CursorIndex myIndex;
-  globalLambda =
-   [&](CXCursor cursor, CXCursor, CXClientData) -> CXChildVisitResult {
-     myIndex.insert(scb::Cursor::MakeCursor(cursor));
-     return CXChildVisit_Recurse;
-   };
+  globalLambda = [&](CXCursor cursor, CXCursor, CXClientData) {
+    myIndex.insert(scb::Cursor::MakeCursor(cursor));
+    return CXChildVisit_Recurse;
+  };
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   std::cerr << myIndex.displayContents();
   clang_disposeTranslationUnit(tu);
