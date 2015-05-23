@@ -12,8 +12,10 @@ endif
 CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-DEPS := cursor.hpp cursor-index.hpp
-AST_OBJ := walk-ast.o cursor.o cursor-index.o
+SRC := src
+
+DEPS := $(SRC)/cursor.hpp $(SRC)/cursor-index.hpp
+AST_OBJ := $(SRC)/walk-ast.o $(SRC)/cursor.o $(SRC)/cursor-index.o
 
 AST_DRIVER := walk-ast
 
