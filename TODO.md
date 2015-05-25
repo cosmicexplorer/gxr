@@ -21,15 +21,7 @@ TODO
 
 # indexing
 
-we want:
-
-- for each entity, have listings (ordered by file, then offset):
-  - decls
-  - refs
-  - defn(s)
-  - aliases
-
-use sql or other database to store results from files, then read from db
+- use sql or other database to store results from files, then read from db
 
 ## now
 
@@ -37,30 +29,25 @@ use sql or other database to store results from files, then read from db
 - offset
 - line
 - col
-- aliases
-- whether is decl/ref/defn
-- whether is type/val/scope/label
-  - language-specific entities: variable/function/scope/label/type
+- whether is decl/ref/defn/call
+  - defn is decl
+    - unless we count assignment as a definition (which i like)
+  - call is ref
+  - these two distinctions can be worked out by the backend which queries the db
+- whether is variable/function/scope/label/type
+- if is variable/function, then type
+  - this can be extended later to types, by saying whether they are a simple type, or whether they are a class/struct
+  - labels and scopes would not use this column
 - language
 - name (can be anon)
-
-also want to be able to query:
-
-- functions/vars
-  - want type
-- types
-  - want functions/vars of this type
-- functions
-  - want to know when function is *referenced*, and when it's *called*
-  - difference: function pointer can be assigned to function, for example
-  - function not called here, but is referenced
-
----
+- semantic scope
 
 ## later
 
-- #if scope
-- semantic scope (namespace/class/struct)
 - linkage (extern/static/normal)
   - c++ implicitly treats const namespace-scope variables as having internal (static) linkage, unlike c
   - this shouldn't be a problem, because libclang can get linkage super easily anyway
+- #if scope
+- namespaces
+- structs/classes
+- aliases
