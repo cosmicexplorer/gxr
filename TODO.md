@@ -16,6 +16,8 @@ TODO
   - remove requirement to include clang headers, or at len  ast automate it
 10. integrate with doxygen comments
 11. produce groff or something that emacs can browse super easy (and give it links to the source so it can be used (kinda) like gtags)
+12. extend to other languages?
+  - python, ruby, java, lisp...
 
 # indexing
 
@@ -27,17 +29,38 @@ we want:
   - defn(s)
   - aliases
 
-- cursors indexed by:
-  - file
-  - offset / line & col
-  - #if scope
-  - semantic scope (namespace/class/struct)
-  - name (can be anon)
-  - aliases
-  - whether is decl/ref/defn
-  - whether is type/val/scope/label
-    - language-specific entities: variable/function/scope/label
-  - language
-  - linkage (extern/static/normal)
-    - c++ implicitly treats const namespace-scope variables as having internal (static) linkage, unlike c
-    - this shouldn't be a problem, because libclang can get linkage super easily anyway
+use sql or other database to store results from files, then read from db
+
+## now
+
+- file
+- offset
+- line
+- col
+- aliases
+- whether is decl/ref/defn
+- whether is type/val/scope/label
+  - language-specific entities: variable/function/scope/label/type
+- language
+- name (can be anon)
+
+also want to be able to query:
+
+- functions/vars
+  - want type
+- types
+  - want functions/vars of this type
+- functions
+  - want to know when function is *referenced*, and when it's *called*
+  - difference: function pointer can be assigned to function, for example
+  - function not called here, but is referenced
+
+---
+
+## later
+
+- #if scope
+- semantic scope (namespace/class/struct)
+- linkage (extern/static/normal)
+  - c++ implicitly treats const namespace-scope variables as having internal (static) linkage, unlike c
+  - this shouldn't be a problem, because libclang can get linkage super easily anyway
