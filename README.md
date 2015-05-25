@@ -2,9 +2,13 @@ semantic-code-browser
 =====================
 
 Who likes coding? ("WE DO!!!" the crowd screams.)
+
 Who likes writing programs that do lots of cool things? ("WE DO!!!" The throng of coders intensifies.)
+
 Now who likes reading through complex code that does a lot of things? (Crowd quiets down.)
+
 Who likes jumping through three different levels of preprocessor macros before you get to the actual function call? (Murmurs among the crowd.)
+
 Who likes finding out the global variable you thought was protected by a mutex is actually modified unprotected in a temporary background thread? (The crowd starts jeering. A lone college student yells out "NOBODY!!!")
 
 You're all completely right. Nobody likes any of that. But for some reason we continue to write code anyway, and if we're going to do it, we might as well have some tools to avoid all that nonsense.
