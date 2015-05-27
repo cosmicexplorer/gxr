@@ -1,0 +1,74 @@
+#+TITLE: TODO
+
+* roadmap
+  :PROPERTIES:
+  :ORDERED:  t
+  :COOKIE_DATA: todo recursive
+  :END:
+** TODO basic output for c : mvp [0/3]
+   - [ ] types and variables
+     - see [[index contents v1]]
+   - [ ] multiple files
+   - [ ] preprocessor macros [0/2]
+     - [ ] be able to read the final actual text
+     - [ ] be able to read all intermediate expansions as well
+   - [ ] conditional compilation support
+** TODO adding c++ : testing plasticity, and adding objects [0/3]
+This depends upon [[index contents v2]].
+   - [ ] add struct/class member decls/refs
+     - treat each one like its own variable maybe?
+   - [ ] add aliases [0/2]
+     - [ ] typedefs
+     - [ ] pointer/refs
+       - super cool!
+   - [ ] labels and gotos
+** TODO make integration : easy tooling [0/3]
+   - [ ] remove requirement to include clang headers
+   - [ ] integrate with make so that output is produced only upon change
+   - [ ] [[target specifiers]]
+*** target specifiers
+essentially specify different units to be compiled together into single binary file (the point of this is that all entities used are specified no more than once (sometimes less than once for entities loaded from a shared library, but that's not too worrisome)). a binary file can be a static library, dynamic library, or executable. obviously, the analogy is more difficult for interpreted languages, but can still be viewed similarly.
+
+there may be room for a separate tool, if required, which calculates dependencies of modules from dynamic languages on each other. this might require not just parsing the input, but also maintaining in memory some part of the runtime, so that we know where to refer python's system.stderr to, for example
+** icing on the cake [0/2]
+   - [ ] integrate with doxygen/cldoc
+   - [ ] org-mode
+** expansion
+essentially, add other languages, hoping that the abstractions used before are generic enough
+   - [ ] python
+   - [ ] ruby
+   - [ ] java
+   - [ ] lisp
+
+* indexing
+use other database to store results from files, then read from db. this allows for multiple-file support simply by joining the databases!
+
+** index contents v1 [0/10]
+   - [ ] file
+   - [ ] offset
+   - [ ] line
+   - [ ] col
+   - [ ] whether is decl/ref/defn/call
+   - [ ] whether is var/func/scope/label/type
+   - [ ] if is var/func, then type
+   - [ ] language
+   - [ ] name
+   - [ ] semantic scope
+
+*** notes
+defn is always decl, unless we count assignment as a definition (which i like; however, that makes things more murky). call is ref; these distinctions can be worked out by the backend that queries the db.
+
+type of a type can be "simple" (typedef of primitive), or a class/struct. labels and scopes would not use the "type" column.
+
+anonymous entities are actually somewhat annoying to resolve.
+
+** index contents v2 [0/6]
+   - [ ] anonymous types/structs/classes/namespaces
+   - [ ] linkage (extern/static/normal)
+   - [ ] #if scope
+   - [ ] namespace entities
+   - [ ] structs/classes
+   - [ ] aliases
+
+*** notes
+c++ implicitly treats const namespace-scope variables as having internal (static) linkage, unlike c. this shouldn't be a problem for libclang, though.
