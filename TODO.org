@@ -26,7 +26,7 @@ simply take all cursors of importance (the ones whose types are mentioned in [[i
 *** backend
 collate all csv files from frontend and produce html documentation
 
-DON'T do tooling yet; just use simple test cases. we will refactor the tooling in [[make integration]].
+DON'T do tooling yet; just use simple test cases. we will refactor the tooling in [[tooling]].
 ** TODO adding c++ : testing plasticity, and adding objects [0/3]
 This depends upon [[index contents v2]].
    - [ ] add struct/class member decls/refs
@@ -36,7 +36,7 @@ This depends upon [[index contents v2]].
      - [ ] pointer/refs
        - super cool!
    - [ ] labels and gotos
-** TODO <<make integration>> : easy tooling [0/3]
+** TODO <<tooling>> make integration : easy tooling [0/3]
    - [ ] remove requirement to include clang headers
    - [ ] integrate with make so that output is produced only upon change
    - [ ] [[target specifiers]]
