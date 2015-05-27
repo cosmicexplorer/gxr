@@ -5,8 +5,15 @@
   :ORDERED:  t
   :COOKIE_DATA: todo recursive
   :END:
-** TODO basic output for c : mvp [0/3]
+** TODO basic output for c : mvp [0/6]
    SCHEDULED: <2015-05-30 Sat>
+   - [ ] basic [[frontend]]
+   - [ ] basic [[backend]] [0/3]
+     - [ ] html per page
+     - [ ] html per entity [0/2]
+       - [ ] presentation for type
+       - [ ] presentation for value
+     - [ ] html glossary
    - [ ] types and variables
      - see [[index contents v1]].
    - [ ] multiple files
@@ -14,6 +21,12 @@
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well
    - [ ] conditional compilation support
+*** frontend
+simply take all cursors of importance (the ones whose types are mentioned in [[index contents v1]]) and stick them in a csv file. no change for multiple files.
+*** backend
+collate all csv files from frontend and produce html documentation
+
+DON'T do tooling yet; just use simple test cases. we will refactor the tooling in [[make integration]].
 ** TODO adding c++ : testing plasticity, and adding objects [0/3]
 This depends upon [[index contents v2]].
    - [ ] add struct/class member decls/refs
@@ -23,7 +36,7 @@ This depends upon [[index contents v2]].
      - [ ] pointer/refs
        - super cool!
    - [ ] labels and gotos
-** TODO make integration : easy tooling [0/3]
+** TODO <<make integration>> : easy tooling [0/3]
    - [ ] remove requirement to include clang headers
    - [ ] integrate with make so that output is produced only upon change
    - [ ] [[target specifiers]]
