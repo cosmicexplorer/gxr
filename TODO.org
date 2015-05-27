@@ -7,14 +7,14 @@
   :END:
 ** TODO basic output for c : mvp [0/3]
    - [ ] types and variables
-     - see [[index contents v1]]
+     - see [[#index contents v1]].
    - [ ] multiple files
    - [ ] preprocessor macros [0/2]
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well
    - [ ] conditional compilation support
 ** TODO adding c++ : testing plasticity, and adding objects [0/3]
-This depends upon [[index contents v2]].
+This depends upon [[#index contents v2]].
    - [ ] add struct/class member decls/refs
      - treat each one like its own variable maybe?
    - [ ] add aliases [0/2]
@@ -43,7 +43,7 @@ essentially, add other languages, hoping that the abstractions used before are g
 * indexing
 use other database to store results from files, then read from db. this allows for multiple-file support simply by joining the databases!
 
-** index contents v1 [0/10]
+** #index contents v1 [0/10]
    - [ ] file
    - [ ] offset
    - [ ] line
@@ -62,7 +62,7 @@ type of a type can be "simple" (typedef of primitive), or a class/struct. labels
 
 anonymous entities are actually somewhat annoying to resolve.
 
-** index contents v2 [0/6]
+** #index contents v2 [0/6]
    - [ ] anonymous types/structs/classes/namespaces
    - [ ] linkage (extern/static/normal)
    - [ ] #if scope
