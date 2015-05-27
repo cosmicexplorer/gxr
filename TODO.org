@@ -6,6 +6,7 @@
   :COOKIE_DATA: todo recursive
   :END:
 ** TODO basic output for c : mvp [0/3]
+   SCHEDULED: <2015-05-30 Sat>
    - [ ] types and variables
      - see [[index contents v1]].
    - [ ] multiple files
@@ -26,7 +27,7 @@ This depends upon [[index contents v2]].
    - [ ] remove requirement to include clang headers
    - [ ] integrate with make so that output is produced only upon change
    - [ ] [[target specifiers]]
-*** <<target specifiers>>
+*** target specifiers
 essentially specify different units to be compiled together into single binary file (the point of this is that all entities used are specified no more than once (sometimes less than once for entities loaded from a shared library, but that's not too worrisome)). a binary file can be a static library, dynamic library, or executable. obviously, the analogy is more difficult for interpreted languages, but can still be viewed similarly.
 
 there may be room for a separate tool, if required, which calculates dependencies of modules from dynamic languages on each other. this might require not just parsing the input, but also maintaining in memory some part of the runtime, so that we know where to refer python's system.stderr to, for example
@@ -39,17 +40,18 @@ essentially, add other languages, hoping that the abstractions used before are g
    - [ ] ruby
    - [ ] java
    - [ ] lisp
+   - etc
 
 * indexing
 use other database to store results from files, then read from db. this allows for multiple-file support simply by joining the databases!
 
-** <<index contents v1>> [0/10]
+** index contents v1 [0/10]
    - [ ] file
    - [ ] offset
    - [ ] line
    - [ ] col
    - [ ] whether is decl/ref/defn/call
-   - [ ] whether is var/func/scope/label/type
+   - [ ] whether is var/func/type
    - [ ] if is var/func, then type
    - [ ] language
    - [ ] name
@@ -62,8 +64,9 @@ type of a type can be "simple" (typedef of primitive), or a class/struct. labels
 
 anonymous entities are actually somewhat annoying to resolve.
 
-** <<index contents v2>> [0/6]
+** index contents v2 [0/6]
    - [ ] anonymous types/structs/classes/namespaces
+   - [ ] add scope/label to
    - [ ] linkage (extern/static/normal)
    - [ ] #if scope
    - [ ] namespace entities

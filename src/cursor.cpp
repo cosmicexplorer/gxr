@@ -6,6 +6,48 @@
 #include "cursor-index.hpp"
 
 namespace semantic_code_browser {
+
+namespace libclang_utils {
+
+std::string GetStringAndDispose(CXString cxs) {
+  std::string ret(clang_getCString(cxs));
+  clang_disposeString(cxs);
+  return ret;
+}
+
+std::string GetCursorSpelling(CXCursor c) {
+  return GetStringFromCXString(clang_getCursorSpelling(c));
+}
+} /* libclang_utils */
+
+namespace entity_traits {
+
+scope::ScopeCursorKinds = {CXCursor_FunctionDecl}
+
+CXCursor
+ scope::GetEnclosingScope(CXCursor c) {
+  CXCursor tmp(c);
+  while (not clang_equalCursors(tmp, clang_getCursorSemanticParent(tmp))) {
+    tmp = clang_getCursorSemanticParent(tmp);
+    for (auto & scopeKind : ScopeCursorKinds) {
+      if (scopeKind == clang_getCursorKind(tmp)) {
+        return tmp;
+      }
+    }
+  }
+  return tmp;
+}
+
+scope::scope(CXCursor thisCursor)
+   : mScope(std::string("::") + libclang_utils::GetStringAndDispose(
+                                 GetEnclosingScope(thisCursor))) {
+}
+
+const std::string & scope::get() {
+  return mScope;
+}
+} /* entity_traits */
+
 /* cursor types */
 const CXCursorKind Cursor::TypeDeclCursorKinds[] = {
  CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl};

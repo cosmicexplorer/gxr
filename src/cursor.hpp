@@ -7,14 +7,39 @@
 #include <clang-c/Index.h>
 
 namespace semantic_code_browser {
-class EntityIndex;
 
-/* cursor variants specification */
-// this doesn't matter now, but it will when we introduce aliases, and
-// especially when we introduce namespaces
-enum Specifier { Type, Value };
+namespace frontend {
 
-enum ScopeSpecifier { Function };
+namespace libclang_utils {
+
+std::string GetStringAndDispose(CXString);
+
+std::string GetCursorSpelling(CXCursor);
+} /* libclang_utils */
+
+namespace entity_traits {
+
+enum class specifier { type, value };
+
+class scope {
+ private:
+  std::string mScope;
+
+  static CXCursorKind ScopeCursorKinds[];
+
+  static CXCursor GetEnclosingScope(CXCursor);
+
+ public:
+  scope(CXCursor);
+
+  const std::string & get();
+}; /* scope */
+} /* entity_traits */
+
+namespace cursor_traits {
+enum class type { declaration, reference, definition, call };
+enum class language { C };
+} /* cursor_traits */
 
 class Cursor {
  protected:
@@ -144,5 +169,6 @@ class DefnCursor : public DeclCursor<S> {
 
   virtual std::string getDerivedType() const;
 };
-}
+} /* frontend */
+} /* semantic_code_browser */
 #endif /* CURSOR_HPP */
