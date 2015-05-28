@@ -12,20 +12,22 @@ endif
 CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
-SRC := src
+SRC_DIR := src
+OBJ_DIR := obj
 
-DEPS := $(SRC)/cursor.hpp $(SRC)/cursor-index.hpp
-AST_OBJ := $(SRC)/walk-ast.o $(SRC)/cursor.o $(SRC)/cursor-index.o
+DEPS := $(wildcard $(SRC_DIR)/*.hpp)
+AST_SRC := $(wildcard $(SRC_DIR)/*.cpp)
+AST_OBJ := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(AST_SRC))
 
 AST_DRIVER := walk-ast
 
 all: $(AST_DRIVER)
 
-%.o: %.cpp $(DEPS)
-	$(CXX) -c $< $(CXXFLAGS)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
+	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 $(AST_DRIVER): $(AST_OBJ)
-	$(CXX) $(AST_OBJ) -o $@ $(LDFLAGS)
+	$(CXX) $^ -o $@ $(LDFLAGS)
 
 TEST_DIR := test
 TEST_C := $(TEST_DIR)/hello.c

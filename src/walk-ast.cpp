@@ -29,10 +29,6 @@ std::string getFixIts(CXDiagnostic diag);
 CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                          CXClientData client_data);
 
-// globals
-std::function<CXChildVisitResult(CXCursor, CXCursor, CXClientData)>
- globalLambda;
-
 int main(int argc, char ** argv) {
   const char * infile;
   char ** clangArgs;
@@ -59,13 +55,7 @@ int main(int argc, char ** argv) {
     std::cerr << getFixIts(diag) << std::endl;
     clang_disposeDiagnostic(diag);
   }
-  scb::CursorIndex myIndex;
-  globalLambda = [&](CXCursor cursor, CXCursor, CXClientData) {
-    myIndex.insert(scb::Cursor::MakeCursor(cursor));
-    return CXChildVisit_Recurse;
-  };
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
-  std::cerr << myIndex.displayContents();
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
   return 0;
@@ -134,8 +124,8 @@ std::string getClangFileName(const CXFile & file) {
 }
 
 // dumps out each element of the tree
-CXChildVisitResult visit(CXCursor cursor,
+CXChildVisitResult visit(CXCursor cursor __attribute__((unused)),
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {
-  return globalLambda(cursor, parent, client_data);
+  return CXChildVisit_Recurse;
 }

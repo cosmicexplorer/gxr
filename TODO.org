@@ -6,7 +6,7 @@
   :COOKIE_DATA: todo recursive
   :END:
 ** TODO basic output for c : mvp [0/6]
-   SCHEDULED: <2015-05-30 Sat>
+   DEADLINE: <2015-05-30 Sat>
    - [ ] basic [[frontend]]
    - [ ] basic [[backend]] [0/3]
      - [ ] html per page
