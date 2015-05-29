@@ -54,6 +54,13 @@ extern const std::list<CXCursorKind> ScopeKinds;
 bool IsValidFilename(std::string);
 
 /*
+  types should be formatted according to a regex, but that's kinda difficult due
+  to the ambiguity available in type specifications in c/c++. right now it just
+  returns false if blank
+*/
+bool IsValidType(std::string);
+
+/*
   scopes are formatted according to the following regex:
 
   (<filename>)?::(identifier::|identifier@)*
@@ -67,7 +74,7 @@ bool IsValidFilename(std::string);
 */
 extern const std::regex ScopeRegex;
 
-bool GetValidScope(std::string);
+bool IsValidScope(std::string);
 
 } /* cursor_traits */
 

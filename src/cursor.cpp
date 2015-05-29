@@ -49,6 +49,10 @@ bool IsValidFilename(std::string s) {
   return true;
 }
 
+bool IsValidType(std::string s) {
+  return "" != s;
+}
+
 // (filename>)?::(identifier::|identifier@)*
 const std::regex ScopeRegex("(.+>)?::(" + IdentifierRegexString + "::|" +
                              IdentifierRegexString + "@)*",
@@ -210,7 +214,7 @@ bool cursor::isValid() {
     std::cerr << "invalid entity specifier" << std::endl;
     res = false;
   }
-  if (not(IsValidIdentifier(type) or ("" == type))) {
+  if (not IsValidType(type)) {
     std::cerr << "invalid type" << std::endl;
     res = false;
   }
@@ -231,8 +235,7 @@ bool cursor::isValid() {
   //      is_in_container(EntitySpecifiers, entitySpec) and
   //      // TODO: type can be empty if type doesn't make sense for the cursor,
   //      // but we're not checking that here. factor it into a separate method.
-  //      (IsValidIdentifier(type) or ("" == type)) and
-  //      IsValidIdentifier(name) and IsValidScope(scope);
+  //      IsValidType(type) and IsValidIdentifier(name) and IsValidScope(scope);
 }
 
 std::string cursor::toString() {
