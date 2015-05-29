@@ -6,10 +6,8 @@
 #include <tuple>     // for parseArgs return type
 #include <regex>     // for parseArgs regex matching
 #include <stdexcept> // for ArgumentError
-#include <algorithm> // for for_each
 // local includes
-#include "cursor.hpp"       // wrapper for libclang cursors
-#include "cursor-index.hpp" // wrapper for own form of ast index
+#include "cursor.hpp" // wrapper for libclang cursors
 
 namespace scb = semantic_code_browser;
 
@@ -28,6 +26,9 @@ std::string getDiagInfos(CXDiagnostic diag);
 std::string getFixIts(CXDiagnostic diag);
 CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                          CXClientData client_data);
+
+// lambda function called by visit
+std::function<void(CXCursor)> GlobalLambda;
 
 int main(int argc, char ** argv) {
   const char * infile;
@@ -55,6 +56,14 @@ int main(int argc, char ** argv) {
     std::cerr << getFixIts(diag) << std::endl;
     clang_disposeDiagnostic(diag);
   }
+  GlobalLambda = [&](CXCursor cur) {
+    using semantic_code_browser::frontend::cursor;
+    cursor c(cur);
+    if (c.isValid()) {
+      std::cout << c.toString()
+                << std::endl;
+    }
+  };
   clang_visitChildren(clang_getTranslationUnitCursor(tu), visit, nullptr);
   clang_disposeTranslationUnit(tu);
   clang_disposeIndex(index);
@@ -124,8 +133,9 @@ std::string getClangFileName(const CXFile & file) {
 }
 
 // dumps out each element of the tree
-CXChildVisitResult visit(CXCursor cursor __attribute__((unused)),
+CXChildVisitResult visit(CXCursor cursor,
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {
+  GlobalLambda(cursor);
   return CXChildVisit_Recurse;
 }

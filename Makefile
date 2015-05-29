@@ -43,11 +43,11 @@ check: check-c
 INCLUDE_ARG := -I/usr/lib/clang/3.6.0/include
 
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< $(INCLUDE_ARG)
+	./$(AST_DRIVER) $< $(INCLUDE_ARG) > $@
 check-c: $(TEST_C_OBJ)
 
 # $(TEST_CXX_OBJ): $(TEST_CXX) all
-# 	./$(AST_DRIVER) $< -std=c++14 $(INCLUDE_ARG) > $(TEST_CXX_OBJ)
+# 	./$(AST_DRIVER) $< -std=c++14 $(INCLUDE_ARG) > $@
 # check-cpp: $(TEST_CXX_OBJ)
 
 clean:

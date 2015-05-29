@@ -3,11 +3,10 @@
 
 // std includes
 #include <list>
+#include <string>
 // external includes
 #include <clang-c/Index.h>
 // local includes
-#include "utilities.hpp"
-
 namespace semantic_code_browser {
 
 namespace frontend {
@@ -17,62 +16,115 @@ namespace libclang_utils {
 // disposes of input CXString; don't attempt to use or dispose the input after
 // calling this
 std::string GetStringAndDispose(CXString);
-
-std::string GetCursorSpelling(CXCursor);
 } /* libclang_utils */
 
-namespace entity_traits {
+namespace generic_utils {
+// std::find yells at me about template arguments, so whatever
+template <typename T, template <typename...> class Container>
+bool is_in_container(Container<T> c, T val) {
+  for (const auto & el : c) {
+    if (el == val) {
+      return true;
+    }
+  }
+  return false;
+}
+}
 
-MAKE_ENUM_STRUCT(specifier, variable, function, type);
+namespace cursor_traits {
 
-template <specifier S>
-const CXCursorKind Kinds[];
+/*
+  identifiers (in c and c++) are formatted according to the following regex:
 
-// class scope {
-//  private:
-//   std::string mScope;
+  [a-zA-Z_][a-zA-Z_0-9]*
+*/
+extern const std::string IdentifierRegexString;
 
-//   static CXCursorKind ScopeCursorKinds[];
+extern const std::regex IdentifierRegex;
 
-//   static CXCursor GetEnclosingScope(CXCursor);
+bool IsValidIdentifier(std::string);
 
-//  public:
-//   scope(CXCursor);
-//   // deserialization
-//   scope(std::string);
-//   scope(std::list<std::string>);
+extern const std::list<std::string> CursorTypes;
 
-//   // serialization
-//   std::string toString();
-//   std::list<std::string> toList();
-// }; /* scope */
-} /* entity_traits */
+extern const std::list<std::string> EntitySpecifiers;
 
-// namespace cursor_traits {
-// enum class type { declaration, reference, definition, call };
-// enum class language { c };
-// } /* cursor_traits */
+extern const std::list<CXCursorKind> ScopeKinds;
 
-// struct cursor {
-//   // index contents
-//   std::string file;
-//   unsigned long long offset;
-//   unsigned long long line;
-//   unsigned long long col;
-//   cursor_traits::type cursorType;
-//   entity_traits::specifier entitySpec;
-//   std::string type;
-//   cursor_traits::language language;
-//   std::string name;
-//   entity_traits::scope scope;
+// returns false if there are null characters
+bool IsValidFilename(std::string);
 
-//   // ctors
-//   cursor(CXCursor);
-//   cursor(std::string);
+/*
+  scopes are formatted according to the following regex:
 
-//   // serialization (csv)
-//   std::string toString();
-// }; /* cursor */
+  (<filename>)?::(identifier::|identifier@)*
+
+  where "filename" is a string identifying the file where the entity is located,
+  if the entity has file-local (static) linkage. valid filenames are specified
+  as above.
+
+  "identifier" is the regex spelled out above. "::" denotes an enclosing
+  namespace or class, while "@" denotes an enclosing function.
+*/
+extern const std::regex ScopeRegex;
+
+bool GetValidScope(std::string);
+
+} /* cursor_traits */
+
+/*
+ this class is not type-safe; it is meant to be easily serializable and
+ parseable through boost::spirit. a checker function is provided; use it when
+ required to ensure invalid values don't sneak into the strings used for
+ individual data members.
+*/
+struct cursor {
+ private:
+  static std::tuple<std::string, unsigned int, unsigned int, unsigned int,
+                    std::string, unsigned int, unsigned int, unsigned int>
+   setup_locations(CXCursor);
+  static std::string setup_cursor_type(CXCursor);
+  static std::string setup_entity_spec(CXCursor);
+  static std::string setup_type(CXCursor);
+  static std::string setup_name(CXCursor);
+  static std::string setup_scope(CXCursor);
+
+ public:
+  // index contents
+  std::string begin_file;
+  // libclang uses unsigned int for these; if it's good enough for them, it's
+  // good enough for us
+  unsigned int begin_offset;
+  unsigned int begin_line;
+  unsigned int begin_col;
+  std::string end_file;
+  unsigned int end_offset;
+  unsigned int end_line;
+  unsigned int end_col;
+  std::string cursorType;
+  std::string entitySpec;
+  std::string type;
+  std::string name;
+  std::string scope;
+
+  cursor(CXCursor);
+  // not sure if this will end up being a good idea. it was confusing to have
+  // copy constructors; i accidentally copy-constructed instead of constructing
+  // from a CXCursor, for example. but it may be useful to have this. time will
+  // tell.
+  cursor(cursor &) = delete;
+
+  /*
+   if any of the strings don't evaluate to a valid choice for that particular
+   element, this returns false. users of this code should probably throw an
+   exception, because it means something probably went screwy during parsing
+   (or there's a bug in this code; hopefully not)
+  */
+  bool isValid();
+
+  // serializes to a line of csv (strings are unquoted because tokens cannot
+  // have quotes in most languages)
+  std::string toString();
+}; /* cursor */
 } /* frontend */
 } /* semantic_code_browser */
 #endif /* CURSOR_HPP */
