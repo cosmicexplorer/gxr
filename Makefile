@@ -16,7 +16,7 @@ ifeq ($(CXX), oops)
 $(error no suitable c++ compiler found! install $(CLANG_CXX) or $(GCC_CXX))
 endif
 
-CXXFLAGS := -std=c++14
+CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
 LDFLAGS := -lclang
 
 SRC_DIR := src
@@ -28,17 +28,9 @@ AST_OBJ := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(AST_SRC))
 
 AST_DRIVER := walk-ast
 
-# default builds (aliased to debug for now)
-ifeq ($(MAKECMDGOALS),)
-CXXFLAGS += -Wall -Wextra -Werror -g -O0
-endif
-# debug builds
-ifeq ($(MAKECMDGOALS),debug)
-CXXFLAGS += -Wall -Wextra -Werror -g -O0
-endif
-# release builds
+# release builds gotta go fast
 ifeq ($(MAKECMDGOALS),release)
-CXXFLAGS += -Ofast
+CXXFLAGS := -std=c++14 -Ofast
 endif
 
 all: $(AST_DRIVER)

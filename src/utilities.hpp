@@ -78,15 +78,14 @@ struct transformer<false> {
             typename... InputContainerArgs>
   static ReturnContainerType<T, ReturnContainerArgs...>
    transform_container(InputContainerType<T, InputContainerArgs...> c) {
-    ReturnContainerType<T, ReturnContainerArgs...> ret;
-    return transform_container_given_input(c, ret);
+    return transform_container_given_input(
+     c, ReturnContainerType<T, ReturnContainerArgs...>());
   }
   template <class ReturnContainerType,
             template <typename...> class InputContainerType, typename... InArgs,
             typename Func>
   static ReturnContainerType map(InputContainerType<InArgs...> c, Func f) {
-    ReturnContainerType ret;
-    return map_given_input<ReturnContainerType>(c, f, ret);
+    return map_given_input<ReturnContainerType>(c, f, ReturnContainerType());
   }
 };
 
