@@ -45,11 +45,14 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
   unsigned int fin_line(0), fin_col(0), fin_offset(0);
   clang_getSpellingLocation(fin_loc, &fin_file, &fin_line, &fin_col,
                             &fin_offset);
+   /* the +-1 is because libclang's representation of file positions is off
+      that amount from what most other programs that manage files (emacs, etc)
+      use; i'm not sure why */
   return std::make_tuple(
-   libclang_utils::GetStringAndDispose(clang_getFileName(beg_file)), beg_offset,
-   beg_line, beg_col,
-   libclang_utils::GetStringAndDispose(clang_getFileName(fin_file)), fin_offset,
-   fin_line, fin_col);
+   libclang_utils::GetStringAndDispose(clang_getFileName(beg_file)),
+   beg_offset + 1, beg_line, beg_col - 1,
+   libclang_utils::GetStringAndDispose(clang_getFileName(fin_file)),
+   fin_offset + 1, fin_line, fin_col - 1);
 }
 
 std::string cursor::setup_cursor_type(CXCursor c) {

@@ -5,8 +5,8 @@
   :ORDERED:  t
   :COOKIE_DATA: todo recursive
   :END:
-** TODO basic output for c : mvp [2/6]
-   DEADLINE: <2015-05-30 Sat>
+** TODO basic output for c : mvp [1/6]
+   DEADLINE: <2015-06-03 Wed>
    - [X] basic [[frontend]]
    - [ ] basic [[backend]] [0/3]
      - [ ] html per page
@@ -17,7 +17,10 @@
    - [-] types and variables [1/2]
      - [ ] make it work completely
      - [X] see [[index contents v1]].
-   - [X] multiple files
+     - [ ] if a function is called, don't also call it a reference; pick one (probably just stick with ref tbh)
+   - [-] multiple files [1/2]
+     - [X] dumps to csv
+     - [ ] unclear how to show static linkage through "scope" paradigm
    - [ ] preprocessor macros [0/2]
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well
