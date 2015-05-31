@@ -1,35 +1,32 @@
 #ifndef CURSOR_HPP
 #define CURSOR_HPP
 
-// std includes
+/* std includes */
 #include <list>
 #include <string>
-// external includes
+#include <unordered_map>
+/* external includes */
 #include <clang-c/Index.h>
-// local includes
+
+namespace std {
+template <>
+struct hash<CXCursorKind> {
+  size_t operator()(const CXCursorKind & c) const {
+    return std::hash<size_t>()(static_cast<size_t>(c));
+  }
+};
+}
+
 namespace semantic_code_browser {
 
 namespace frontend {
 
 namespace libclang_utils {
 
-// disposes of input CXString; don't attempt to use or dispose the input after
-// calling this
+/* disposes of input CXString; don't attempt to use or dispose the input after
+   calling this */
 std::string GetStringAndDispose(CXString);
 } /* libclang_utils */
-
-namespace generic_utils {
-// std::find yells at me about template arguments, so whatever
-template <typename T, template <typename...> class Container>
-bool is_in_container(Container<T> c, T val) {
-  for (const auto & el : c) {
-    if (el == val) {
-      return true;
-    }
-  }
-  return false;
-}
-}
 
 namespace cursor_traits {
 
@@ -48,15 +45,17 @@ extern const std::list<std::string> CursorTypes;
 
 extern const std::list<std::string> EntitySpecifiers;
 
-extern const std::list<CXCursorKind> ScopeKinds;
+/* each scope cursor type is suffixed by a particular string (see ScopeRegex
+   below). this contains the lookup table for those cursor types. */
+extern const std::unordered_map<CXCursorKind, std::string> ScopeKinds;
 
-// returns false if there are null characters
+/* returns false if there are null characters */
 bool IsValidFilename(std::string);
 
 /*
   types should be formatted according to a regex, but that's kinda difficult due
   to the ambiguity available in type specifications in c/c++. right now it just
-  returns false if blank
+  returns false if blank.
 */
 bool IsValidType(std::string);
 
@@ -79,10 +78,10 @@ bool IsValidScope(std::string);
 } /* cursor_traits */
 
 /*
- this class is not type-safe; it is meant to be easily serializable and
- parseable through boost::spirit. a checker function is provided; use it when
- required to ensure invalid values don't sneak into the strings used for
- individual data members.
+  this class is not type-safe; it is meant to be easily serializable and
+  parseable through boost::spirit. a checker function is provided; use it when
+  required to ensure invalid values don't sneak into the strings used for
+  individual data members.
 */
 struct cursor {
  private:
@@ -96,10 +95,10 @@ struct cursor {
   static std::string setup_scope(CXCursor);
 
  public:
-  // index contents
+  /* index contents */
   std::string begin_file;
-  // libclang uses unsigned int for these; if it's good enough for them, it's
-  // good enough for us
+  /* libclang uses unsigned int for these; if it's good enough for them, it's
+     good enough for us */
   unsigned int begin_offset;
   unsigned int begin_line;
   unsigned int begin_col;
@@ -114,10 +113,12 @@ struct cursor {
   std::string scope;
 
   cursor(CXCursor);
-  // not sure if this will end up being a good idea. it was confusing to have
-  // copy constructors; i accidentally copy-constructed instead of constructing
-  // from a CXCursor, for example. but it may be useful to have this. time will
-  // tell.
+  /*
+    not sure if this will end up being a good idea. it was confusing to have
+    copy constructors; i accidentally copy-constructed instead of constructing
+    from a CXCursor, for example. but it may be useful to have this. time will
+    tell.
+  */
   cursor(cursor &) = delete;
 
   /*
@@ -128,8 +129,10 @@ struct cursor {
   */
   bool isValid();
 
-  // serializes to a line of csv (strings are unquoted because tokens cannot
-  // have quotes in most languages)
+  /*
+    serializes to a line of csv (strings are unquoted because tokens cannot
+    have quotes in most languages)
+  */
   std::string toString();
 }; /* cursor */
 } /* frontend */

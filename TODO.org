@@ -14,9 +14,10 @@
        - [ ] presentation for type
        - [ ] presentation for value
      - [ ] html glossary
-   - [X] types and variables
-     - see [[index contents v1]].
-   - [ ] multiple files
+   - [-] types and variables [1/2]
+     - [ ] make it work completely
+     - [X] see [[index contents v1]].
+   - [X] multiple files
    - [ ] preprocessor macros [0/2]
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well

@@ -1,13 +1,13 @@
-// this is all wrenched from
-// https://gist.github.com/yifu/3761845
+/* this is all wrenched from */
+/* https://gist.github.com/yifu/3761845 */
 
-// c++ includes
-#include <iostream>  // for I/O
-#include <tuple>     // for parseArgs return type
-#include <regex>     // for parseArgs regex matching
-#include <stdexcept> // for ArgumentError
-// local includes
-#include "cursor.hpp" // wrapper for libclang cursors
+/* c++ includes */
+#include <iostream>  /* for I/O */
+#include <tuple>     /* for parseArgs return type */
+#include <regex>     /* for parseArgs regex matching */
+#include <stdexcept> /* for ArgumentError */
+/* local includes */
+#include "cursor.hpp" /* wrapper for libclang cursors */
 
 namespace scb = semantic_code_browser;
 
@@ -17,17 +17,17 @@ class ArgumentError : public std::runtime_error {
   }
 };
 
-// validates input
+/* validates input */
 std::tuple<const char *, char **, int> parseArgs(int argc, char ** argv);
 
-// clang visitor functions
+/* clang visitor functions */
 std::string getClangFileName(const CXFile & file);
 std::string getDiagInfos(CXDiagnostic diag);
 std::string getFixIts(CXDiagnostic diag);
 CXChildVisitResult visit(CXCursor cursor, CXCursor parent,
                          CXClientData client_data);
 
-// lambda function called by visit
+/* lambda function called by visit */
 std::function<void(CXCursor)> GlobalLambda;
 
 int main(int argc, char ** argv) {
@@ -132,7 +132,7 @@ std::string getClangFileName(const CXFile & file) {
   return filename;
 }
 
-// dumps out each element of the tree
+/* dumps out each element of the tree */
 CXChildVisitResult visit(CXCursor cursor,
                          CXCursor parent __attribute__((unused)),
                          CXClientData client_data __attribute__((unused))) {

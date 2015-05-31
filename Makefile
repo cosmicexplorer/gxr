@@ -1,4 +1,11 @@
-.PHONY: all clean check-c check-cpp check
+# RUNS DEBUG AS DEFAULT TARGET
+.PHONY: all debug release clean check-c check-cpp check
+
+# note: if you run make with multiple targets at once, the compilation flags
+# will not be set correctly. this is because it is confusing and not wholely
+# necessary to specify separate makefiles to take care of the uncommon case of
+# multiple targets. if you do like using multiple targets, sorry. make an issue
+# and i'll fix it.
 
 CLANG_CXX := clang++
 GCC_CXX := g++
@@ -9,7 +16,7 @@ ifeq ($(CXX), oops)
 $(error no suitable c++ compiler found! install $(CLANG_CXX) or $(GCC_CXX))
 endif
 
-CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
+CXXFLAGS := -std=c++14
 LDFLAGS := -lclang
 
 SRC_DIR := src
@@ -21,7 +28,22 @@ AST_OBJ := $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(AST_SRC))
 
 AST_DRIVER := walk-ast
 
+# default builds (aliased to debug for now)
+ifeq ($(MAKECMDGOALS),)
+CXXFLAGS += -Wall -Wextra -Werror -g -O0
+endif
+# debug builds
+ifeq ($(MAKECMDGOALS),debug)
+CXXFLAGS += -Wall -Wextra -Werror -g -O0
+endif
+# release builds
+ifeq ($(MAKECMDGOALS),release)
+CXXFLAGS += -Ofast
+endif
+
 all: $(AST_DRIVER)
+debug: all
+release: all
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
 	$(CXX) -o $@ -c $< $(CXXFLAGS)
