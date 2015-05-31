@@ -2,9 +2,9 @@
 #define CURSOR_HPP
 
 /* std includes */
-#include <list>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 /* external includes */
 #include <clang-c/Index.h>
 
@@ -21,6 +21,11 @@ namespace semantic_code_browser {
 
 namespace frontend {
 
+struct ValidityError : public std::runtime_error {
+  ValidityError(std::string s) : std::runtime_error(s) {
+  }
+};
+
 namespace libclang_utils {
 
 /* disposes of input CXString; don't attempt to use or dispose the input after
@@ -28,38 +33,35 @@ namespace libclang_utils {
 std::string GetStringAndDispose(CXString);
 } /* libclang_utils */
 
-namespace cursor_traits {
-
 /*
-  identifiers (in c and c++) are formatted according to the following regex:
-
-  [a-zA-Z_][a-zA-Z_0-9]*
+  this class is not type-safe; it is meant to be easily serializable and
+  parseable through boost::spirit. a checker function is provided; use it when
+  required to ensure invalid values don't sneak into the strings used for
+  individual data members.
 */
-extern const std::string IdentifierRegexString;
+struct cursor {
+ private:
+  /* creation of the cursor */
+  static std::string setup_cursor_type(CXCursor);
+  static std::string setup_entity_spec(CXCursor);
+  static std::string setup_type(CXCursor);
+  static std::string setup_name(CXCursor);
+  /* named differently because they're meant to be used inside the
+     constructor, after other elements have been setup already */
+  std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
+             unsigned int, unsigned int, unsigned int> setupLocations(CXCursor);
+  std::string setupScope(CXCursor);
 
-extern const std::regex IdentifierRegex;
-
-bool IsValidIdentifier(std::string);
-
-extern const std::list<std::string> CursorTypes;
-
-extern const std::list<std::string> EntitySpecifiers;
-
-/* each scope cursor type is suffixed by a particular string (see ScopeRegex
-   below). this contains the lookup table for those cursor types. */
-extern const std::unordered_map<CXCursorKind, std::string> ScopeKinds;
-
-/* returns false if there are null characters */
-bool IsValidFilename(std::string);
-
-/*
+  /* validity checking */
+  /*
   types should be formatted according to a regex, but that's kinda difficult due
   to the ambiguity available in type specifications in c/c++. right now it just
   returns false if blank.
-*/
-bool IsValidType(std::string);
-
-/*
+  */
+  bool isValidType(std::string);
+  /* returns false if there are null characters */
+  bool isValidFilename(std::string);
+  /*
   scopes are formatted according to the following regex:
 
   (<filename>)?::(identifier::|identifier@)*
@@ -70,31 +72,32 @@ bool IsValidType(std::string);
 
   "identifier" is the regex spelled out above. "::" denotes an enclosing
   namespace or class, while "@" denotes an enclosing function.
+  */
+  bool isValidScope(std::string);
+
+  /*
+  identifiers (in c and c++) are formatted according to the following regex:
+
+  [a-zA-Z_][a-zA-Z_0-9]*
 */
-extern const std::regex ScopeRegex;
-
-bool IsValidScope(std::string);
-
-} /* cursor_traits */
-
-/*
-  this class is not type-safe; it is meant to be easily serializable and
-  parseable through boost::spirit. a checker function is provided; use it when
-  required to ensure invalid values don't sneak into the strings used for
-  individual data members.
-*/
-struct cursor {
- private:
-  static std::tuple<std::string, unsigned int, unsigned int, unsigned int,
-                    std::string, unsigned int, unsigned int, unsigned int>
-   setup_locations(CXCursor);
-  static std::string setup_cursor_type(CXCursor);
-  static std::string setup_entity_spec(CXCursor);
-  static std::string setup_type(CXCursor);
-  static std::string setup_name(CXCursor);
-  static std::string setup_scope(CXCursor);
+  bool isValidIdentifier(std::string);
 
  public:
+  /* publicly available data */
+  static const std::regex ScopeRegex;
+  static const std::string IdentifierRegexString;
+  static const std::regex IdentifierRegex;
+  static const std::unordered_set<std::string> CursorTypes;
+  static const std::unordered_set<std::string> EntitySpecifiers;
+  static const std::unordered_set<std::string> UntypedEntitySpecifiers;
+  /* each scope cursor type is suffixed by a particular string (see ScopeRegex
+     below). this contains the lookup table for those cursor types. */
+  static const std::unordered_map<CXCursorKind, std::string> ScopeKinds;
+
+  std::string cursorType;
+  std::string entitySpec;
+  std::string type;
+  std::string name;
   /* index contents */
   std::string begin_file;
   /* libclang uses unsigned int for these; if it's good enough for them, it's
@@ -106,26 +109,17 @@ struct cursor {
   unsigned int end_offset;
   unsigned int end_line;
   unsigned int end_col;
-  std::string cursorType;
-  std::string entitySpec;
-  std::string type;
-  std::string name;
   std::string scope;
 
   cursor(CXCursor);
-  /*
-    not sure if this will end up being a good idea. it was confusing to have
-    copy constructors; i accidentally copy-constructed instead of constructing
-    from a CXCursor, for example. but it may be useful to have this. time will
-    tell.
-  */
-  cursor(cursor &) = delete;
+  /* copy constructing these things make bookkeeping hard */
+  cursor(const cursor &) = delete;
 
   /*
    if any of the strings don't evaluate to a valid choice for that particular
    element, this returns false. users of this code should probably throw an
    exception, because it means something probably went screwy during parsing
-   (or there's a bug in this code; hopefully not)
+   (or there's a bug in this code; hopefully not!)
   */
   bool isValid();
 

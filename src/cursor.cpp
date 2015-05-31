@@ -25,69 +25,19 @@ std::string GetStringAndDispose(CXString cxs) {
 }
 } /* libclang_utils */
 
-namespace cursor_traits {
-
-const std::string IdentifierRegexString("[a-zA-Z_][a-zA-Z_0-9]*");
-
-const std::regex IdentifierRegex(IdentifierRegexString,
-                                 std::regex_constants::extended);
-
-bool IsValidIdentifier(std::string s) {
-  return std::regex_match(s, IdentifierRegex);
-}
-
-const std::list<std::string> CursorTypes{"declaration", "reference",
-                                         "definition", "call"};
-
-const std::list<std::string> EntitySpecifiers{"type", "variable", "function"};
-
-const std::unordered_map<CXCursorKind, std::string> ScopeKinds{
- {CXCursor_FunctionDecl, "@"}};
-
-bool IsValidFilename(std::string s) {
-  for (char & c : s) {
-    if ('\0' == c) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool IsValidType(std::string s) {
-  return not s.empty();
-}
-
-using namespace utilities;
-/* (filename>)?::(identifier::|identifier@)* */
-const std::regex ScopeRegex(
- "(.+>)?::(" +
-  boost::algorithm::join(
-   transformer<true>::map<std::vector<std::string>>(
-    ScopeKinds, [](auto p) { return IdentifierRegexString + p.second; }),
-   "|") +
-  ")*",
- std::regex_constants::extended);
-
-bool IsValidScope(std::string s) {
-  std::smatch matches;
-  if (not std::regex_search(s, matches, ScopeRegex)) {
-    return false;
-  } else {
-    return (not matches[1].matched) or IsValidFilename(matches[1]);
-  }
-}
-} /* cursor_traits */
+namespace cursor_traits {} /* cursor_traits */
 
 std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
            unsigned int, unsigned int, unsigned int>
- cursor::setup_locations(CXCursor c) {
+ cursor::setupLocations(CXCursor c) {
   CXSourceRange range(clang_getCursorExtent(c));
   CXSourceLocation begin_loc(clang_getRangeStart(range));
   CXSourceLocation fin_loc(clang_getRangeEnd(range));
   /* get beginning stats */
   CXFile beg_file;
   unsigned int beg_line(0), beg_col(0), beg_offset(0);
-  /* TODO: refactor and use clang_getFileLocation for macros! */
+  /* TODO: refactor and use clang_getFileLocation for macros and macro
+     expansions! */
   clang_getSpellingLocation(begin_loc, &beg_file, &beg_line, &beg_col,
                             &beg_offset);
   /* get end stats */
@@ -95,16 +45,11 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
   unsigned int fin_line(0), fin_col(0), fin_offset(0);
   clang_getSpellingLocation(fin_loc, &fin_file, &fin_line, &fin_col,
                             &fin_offset);
-  try {
-    return std::make_tuple(
-     libclang_utils::GetStringAndDispose(clang_getFileName(beg_file)),
-     beg_offset, beg_line, beg_col,
-     libclang_utils::GetStringAndDispose(clang_getFileName(fin_file)),
-     fin_offset, fin_line, fin_col);
-  } catch (...) {
-    std::cerr << "GOTCHA2" << std::endl;
-    exit(1);
-  }
+  return std::make_tuple(
+   libclang_utils::GetStringAndDispose(clang_getFileName(beg_file)), beg_offset,
+   beg_line, beg_col,
+   libclang_utils::GetStringAndDispose(clang_getFileName(fin_file)), fin_offset,
+   fin_line, fin_col);
 }
 
 std::string cursor::setup_cursor_type(CXCursor c) {
@@ -165,8 +110,8 @@ std::string cursor::setup_entity_spec(CXCursor c) {
 }
 
 std::string cursor::setup_type(CXCursor c) {
-  /* returns empty string (invalid) if having a "type" doesn't make sense for */
-  /* the cursor */
+  /* returns empty string (invalid) if having a "type" doesn't make sense for
+   * the cursor */
   return libclang_utils::GetStringAndDispose(
    clang_getTypeSpelling(clang_getCursorType(c)));
 }
@@ -175,21 +120,24 @@ std::string cursor::setup_name(CXCursor c) {
   return libclang_utils::GetStringAndDispose(clang_getCursorSpelling(c));
 }
 
-std::string cursor::setup_scope(CXCursor c) {
+std::string cursor::setupScope(CXCursor c) {
+  using libclang_utils::GetStringAndDispose;
+  std::string scope_str;
+  if (clang_getCursorLinkage(c) == CXLinkage_Internal) {
+    scope_str += begin_file + ">";
+  }
+  scope_str += "::";
   CXCursor tmp(c);
-  std::string scope_str("::");
   /* TODO: if static linkage, note that at front, obv */
   while (not clang_equalCursors(tmp, clang_getCursorSemanticParent(tmp))) {
     tmp = clang_getCursorSemanticParent(tmp);
-    /* TODO: add namespace and class scope */
-    /* for (const auto & scopeKind : cursor_traits::ScopeKinds) { */
-    /*   if (scopeKind == clang_getCursorKind(c)) { */
-    /*     scope_str += ; */
-    /*   } */
-    /* } */
-    if (clang_getCursorKind(tmp) == CXCursor_FunctionDecl) {
+    auto it =
+     std::find_if(std::begin(ScopeKinds), std::end(ScopeKinds), [&tmp](auto p) {
+       return p.first == clang_getCursorKind(tmp);
+     });
+    if (std::end(ScopeKinds) != it) {
       scope_str +=
-       libclang_utils::GetStringAndDispose(clang_getCursorSpelling(tmp)) + "@";
+       GetStringAndDispose(clang_getCursorSpelling(tmp)) + it->second;
     }
   }
   return scope_str;
@@ -199,22 +147,100 @@ cursor::cursor(CXCursor c)
    : cursorType(setup_cursor_type(c)),
      entitySpec(setup_entity_spec(c)),
      type(setup_type(c)),
-     name(setup_name(c)),
-     scope(setup_scope(c)) {
+     name(setup_name(c)) {
   std::tie(begin_file, begin_offset, begin_line, begin_col, end_file,
-           end_offset, end_line, end_col) = setup_locations(c);
+           end_offset, end_line, end_col) = setupLocations(c);
+  scope = setupScope(c);
 }
+
+bool cursor::isValidType(std::string type) {
+  return (utilities::is_in_container(type, UntypedEntitySpecifiers)) or
+         (not type.empty());
+}
+
+bool cursor::isValidFilename(std::string s) {
+  if (std::any_of(std::begin(s), std::end(s),
+                  [](auto c) { return c == '\0'; })) {
+    return false;
+  }
+  return true;
+}
+
+const std::unordered_map<CXCursorKind, std::string> cursor::ScopeKinds{
+ {CXCursor_FunctionDecl, "@"}};
+
+namespace {
+/* TODO: remove. here for debugging */
+static std::string output_scope_regex(std::string s) {
+  std::cerr << s << std::endl;
+  return s;
+}
+}
+
+const std::string cursor::IdentifierRegexString("[a-zA-Z_][a-zA-Z_0-9]*");
+
+const std::regex cursor::IdentifierRegex(IdentifierRegexString,
+                                         std::regex_constants::extended);
+
+/* (filename>)?::(identifier::|identifier@)* */
+const std::regex cursor::ScopeRegex(
+ output_scope_regex(
+  "(.+>)?::(" +
+  boost::algorithm::join(
+   utilities::transformer<true>::map<std::vector<std::string>>(
+    ScopeKinds, [](auto p) { return IdentifierRegexString + p.second; }),
+   "|") +
+  ")*"),
+ std::regex_constants::extended);
+
+bool cursor::isValidScope(std::string s) {
+  std::smatch matches;
+  if (not std::regex_search(s, matches, ScopeRegex)) {
+    return false;
+  } else {
+    return (not matches[1].matched) or isValidFilename(matches[1]);
+  }
+}
+
+bool cursor::isValidIdentifier(std::string s) {
+  return std::regex_match(s, IdentifierRegex);
+}
+
+const std::unordered_set<std::string> cursor::CursorTypes{
+ "declaration", "reference", "definition", "call"};
+
+const std::unordered_set<std::string> cursor::EntitySpecifiers{
+ "type", "variable", "function"};
+
+namespace {
+static std::unordered_set<std::string> untyped_entity_specifiers_impl{"type"};
+static std::unordered_set<std::string> create_entity_specifiers() {
+  if (std::any_of(std::begin(untyped_entity_specifiers_impl),
+                  std::end(untyped_entity_specifiers_impl), [](auto specifier) {
+                    return std::find(std::begin(cursor::EntitySpecifiers),
+                                     std::end(cursor::EntitySpecifiers),
+                                     specifier) ==
+                           std::end(cursor::EntitySpecifiers);
+                  })) {
+    throw ValidityError(
+     "untyped entity specifiers are not a subset of entity specifiers");
+  } else {
+    return untyped_entity_specifiers_impl;
+  }
+}
+}
+const std::unordered_set<std::string>
+ cursor::UntypedEntitySpecifiers(create_entity_specifiers());
 
 bool cursor::isValid() {
   using namespace cursor_traits;
   using utilities::is_in_container;
-  /* TODO: not sure begin_file == end_file is necessary */
   bool res = true;
   if (begin_file != end_file) {
     std::cerr << "file name mismatch" << std::endl;
     res = false;
   }
-  if (not IsValidFilename(begin_file)) {
+  if (not isValidFilename(begin_file)) {
     std::cerr << "invalid filename" << std::endl;
     res = false;
   }
@@ -226,15 +252,15 @@ bool cursor::isValid() {
     std::cerr << "invalid entity specifier" << std::endl;
     res = false;
   }
-  if (not IsValidType(type)) {
+  if (not isValidType(type)) {
     std::cerr << "invalid type" << std::endl;
     res = false;
   }
-  if (not IsValidIdentifier(name)) {
+  if (not isValidIdentifier(name)) {
     std::cerr << "invalid name" << std::endl;
     res = false;
   }
-  if (not IsValidScope(scope)) {
+  if (not isValidScope(scope)) {
     std::cerr << "invalid scope" << std::endl;
     res = false;
   }

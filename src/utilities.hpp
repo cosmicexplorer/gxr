@@ -29,25 +29,11 @@ struct is_equal {
   }
 };
 
-template <typename T>
-is_equal<T> get_is_equal(T val) {
-  return is_equal<T>(val);
-}
-
 template <typename T, template <typename...> class Container,
           typename ContainerType, typename... ContainerArgs>
 bool is_in_container(T val, Container<ContainerType, ContainerArgs...> c) {
   return std::any_of(std::begin(c), std::end(c), is_equal<ContainerType>(val));
 }
-
-/*
-  allow more performant overloads of templated functions, if the capabilities
-  are available.
-*/
-typedef bool use_performant;
-
-template <use_performant>
-struct transformer;
 
 template <template <typename...> class ReturnContainerType,
           typename... ReturnContainerArgs, typename T,
@@ -69,6 +55,15 @@ ReturnContainerType map_given_input(InputContainerType<InArgs...> c, Func f,
   std::transform(std::begin(c), std::end(c), std::back_inserter(out), f);
   return out;
 }
+
+/*
+  allow more performant overloads of templated functions, if the capabilities
+  are available.
+*/
+typedef bool use_performant;
+
+template <use_performant>
+struct transformer;
 
 template <>
 struct transformer<false> {

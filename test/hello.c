@@ -2,9 +2,11 @@ int __a() {
   return 3;
 }
 
-struct {
+/*
+  struct {
   int a;
-} bb = {.a = 3};
+  } bb = {.a = 3};
+*/
 
 #define AAAA (__a())
 #define BBBB (AAAA + 3)
@@ -21,7 +23,8 @@ static int A = 4;
 
 #define F(x, y) x##y
 
-int b;
+typedef int NEW_TYPE_YO;
+NEW_TYPE_YO b;
 int a;
 
 #ifdef BBB
