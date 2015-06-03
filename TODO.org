@@ -5,7 +5,7 @@
   :ORDERED:  t
   :COOKIE_DATA: todo recursive
   :END:
-** TODO basic output for c : mvp [1/6]
+** TODO basic output for c : mvp [3/6]
    DEADLINE: <2015-06-03 Wed>
    - [X] basic backend([[backend]])
    - [ ] basic frontend ([[frontend]]) [0/3]
@@ -14,18 +14,20 @@
        - [ ] presentation for type
        - [ ] presentation for value
      - [ ] html glossary
-   - [-] types and variables [2/3]
-     - [ ] make it work completely
+   - [X] types and variables [4/4]
+     - [X] make it work completely
      - [X] see [[index contents v1]].
      - [X] if a function is called, don't also call it a reference; pick one (probably just stick with ref tbh)
        - disagree, see [[call vs reference]] below
-   - [-] multiple files [1/2]
+     - [X] add ref_scope field
+   - [X] multiple files [2/2]
      - [X] dumps to csv
-     - [ ] unclear how to show static linkage through "scope" paradigm
+     - [X] unclear how to show static linkage through "scope" paradigm
    - [ ] preprocessor macros [0/2]
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well
    - [ ] conditional compilation support
+     - this should be fun if done correctly
 *** backend
 simply take all cursors of importance (the ones whose types are mentioned in [[index contents v1]]) and stick them in a csv file. no change for multiple files.
 *** frontend

@@ -12,7 +12,8 @@ namespace std {
 template <>
 struct hash<CXCursorKind> {
   size_t operator()(const CXCursorKind & c) const {
-    return std::hash<size_t>()(static_cast<size_t>(c));
+    constexpr static std::hash<size_t> h = std::hash<size_t>();
+    return h(static_cast<size_t>(c));
   }
 };
 }
@@ -46,11 +47,12 @@ struct cursor {
   static std::string setup_entity_spec(CXCursor);
   static std::string setup_type(CXCursor);
   static std::string setup_name(CXCursor);
+  std::string setup_scope(CXCursor);
+  std::string setup_ref_scope(CXCursor);
   /* named differently because they're meant to be used inside the
      constructor, after other elements have been setup already */
   std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
              unsigned int, unsigned int, unsigned int> setupLocations(CXCursor);
-  std::string setupScope(CXCursor);
 
   /* validity checking */
   /*
@@ -63,15 +65,17 @@ struct cursor {
   bool isValidFilename(std::string);
   /*
   scopes are formatted according to the following regex:
+  (or something like this, check its definition in cursor.cpp)
 
-  (<filename>)?::(identifier::|identifier@)*
+  >?::(identifier::|identifier@)*
 
   where "filename" is a string identifying the file where the entity is located,
-  if the entity has file-local (static) linkage. valid filenames are specified
-  as above.
+  if the entity has file-local (static) linkage, the side carat at the front is
+  introduced.
 
   "identifier" is the regex spelled out above. "::" denotes an enclosing
-  namespace or class, while "@" denotes an enclosing function.
+  namespace or class, while "@" denotes an enclosing function. (again, see the
+  full definition in cursor.cpp)
   */
   bool isValidScope(std::string);
 
@@ -79,7 +83,7 @@ struct cursor {
   identifiers (in c and c++) are formatted according to the following regex:
 
   [a-zA-Z_][a-zA-Z_0-9]*
-*/
+  */
   bool isValidIdentifier(std::string);
 
  public:
@@ -94,10 +98,11 @@ struct cursor {
      below). this contains the lookup table for those cursor types. */
   static const std::unordered_map<CXCursorKind, std::string> ScopeKinds;
 
-  std::string cursorType;
-  std::string entitySpec;
-  std::string type;
-  std::string name;
+  /* these are listed in the order they appear in the csv line, and also
+     partially in the order they're initialized. i say "partially" because
+     begin_file to end_col are initialized all at once in the body of the
+     constructor, which occurs, temporally, after the base member
+     initialization section */
   /* index contents */
   std::string begin_file;
   /* libclang uses unsigned int for these; if it's good enough for them, it's
@@ -109,24 +114,28 @@ struct cursor {
   unsigned int end_offset;
   unsigned int end_line;
   unsigned int end_col;
+  std::string cursorType;
+  std::string entitySpec;
+  std::string type;
+  std::string name;
+  /* scope of current cursor */
   std::string scope;
+  /* scope of referenced entity, undefined if cursor is not a reference */
+  std::string ref_scope;
 
   cursor(CXCursor);
-  /* copy constructing these things make bookkeeping hard */
+  /* copy constructing these things makes bookkeeping hard */
   cursor(const cursor &) = delete;
 
-  /*
-   if any of the strings don't evaluate to a valid choice for that particular
-   element, this returns false. users of this code should probably throw an
-   exception, because it means something probably went screwy during parsing
-   (or there's a bug in this code; hopefully not!)
-  */
+  /* if any of the strings don't evaluate to a valid choice for that particular
+     element, this returns false. users of this code should probably throw an
+     exception, because it means something probably went screwy during parsing
+     (or there's a bug in this code; hopefully not!) */
   bool isValid();
 
-  /*
-    serializes to a line of csv (strings are unquoted because tokens cannot
-    have quotes in most languages)
-  */
+  /* serializes to a line of csv (strings are unquoted because tokens cannot
+     have quotes in most languages and i think it's confusing to have them
+     there) */
   std::string toString();
 }; /* cursor */
 } /* frontend */
