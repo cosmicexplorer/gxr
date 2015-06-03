@@ -45,9 +45,9 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
   unsigned int fin_line(0), fin_col(0), fin_offset(0);
   clang_getSpellingLocation(fin_loc, &fin_file, &fin_line, &fin_col,
                             &fin_offset);
-   /* the +-1 is because libclang's representation of file positions is off
-      that amount from what most other programs that manage files (emacs, etc)
-      use; i'm not sure why */
+  /* the +-1 is because libclang's representation of file positions is off
+     that amount from what most other programs that manage files (emacs, etc)
+     use; i'm not sure why */
   return std::make_tuple(
    libclang_utils::GetStringAndDispose(clang_getFileName(beg_file)),
    beg_offset + 1, beg_line, beg_col - 1,
@@ -201,6 +201,8 @@ bool cursor::isValidScope(std::string s) {
   if (not std::regex_search(s, matches, ScopeRegex)) {
     return false;
   } else {
+    /* note: this depends on the parenthetical grouping of the regex ScopeRegex
+       given above */
     return (not matches[1].matched) or isValidFilename(matches[1]);
   }
 }
@@ -217,27 +219,20 @@ const std::unordered_set<std::string> cursor::EntitySpecifiers{
 
 namespace {
 static std::unordered_set<std::string> untyped_entity_specifiers_impl{"type"};
-static std::unordered_set<std::string> create_entity_specifiers() {
-  if (std::any_of(std::begin(untyped_entity_specifiers_impl),
-                  std::end(untyped_entity_specifiers_impl), [](auto specifier) {
-                    return std::find(std::begin(cursor::EntitySpecifiers),
-                                     std::end(cursor::EntitySpecifiers),
-                                     specifier) ==
-                           std::end(cursor::EntitySpecifiers);
-                  })) {
+static std::unordered_set<std::string> create_untyped_entity_specifiers() {
+  if (utilities::is_subset(untyped_entity_specifiers_impl,
+                           cursor::EntitySpecifiers)) {
+    return untyped_entity_specifiers_impl;
+  } else {
     throw ValidityError(
      "untyped entity specifiers are not a subset of entity specifiers");
-  } else {
-    return untyped_entity_specifiers_impl;
   }
 }
 }
 const std::unordered_set<std::string>
- cursor::UntypedEntitySpecifiers(create_entity_specifiers());
+ cursor::UntypedEntitySpecifiers(create_untyped_entity_specifiers());
 
 bool cursor::isValid() {
-  using namespace cursor_traits;
-  using utilities::is_in_container;
   bool res = true;
   if (begin_file != end_file) {
     std::cerr << "file name mismatch" << std::endl;
@@ -247,11 +242,11 @@ bool cursor::isValid() {
     std::cerr << "invalid filename" << std::endl;
     res = false;
   }
-  if (not is_in_container(cursorType, CursorTypes)) {
+  if (not utilities::is_in_container(cursorType, CursorTypes)) {
     std::cerr << "invalid cursor type" << std::endl;
     res = false;
   }
-  if (not is_in_container(entitySpec, EntitySpecifiers)) {
+  if (not utilities::is_in_container(entitySpec, EntitySpecifiers)) {
     std::cerr << "invalid entity specifier" << std::endl;
     res = false;
   }

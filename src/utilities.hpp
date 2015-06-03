@@ -35,16 +35,11 @@ bool is_in_container(T val, Container<ContainerType, ContainerArgs...> c) {
   return std::any_of(std::begin(c), std::end(c), is_equal<ContainerType>(val));
 }
 
-template <template <typename...> class ReturnContainerType,
-          typename... ReturnContainerArgs, typename T,
-          template <typename...> class InputContainerType,
-          typename... InputContainerArgs>
-static ReturnContainerType<T, ReturnContainerArgs...>
- transform_container_given_input(
-  InputContainerType<T, InputContainerArgs...> c,
-  ReturnContainerType<T, ReturnContainerArgs...> out) {
-  std::copy(std::begin(c), std::end(c), std::back_inserter(out));
-  return out;
+template <typename ContainerA, typename ContainerB>
+bool is_subset(ContainerA a, ContainerB b) {
+  return not std::any_of(std::begin(a), std::end(a), [&b](auto element) {
+    return not is_in_container(element, b);
+  });
 }
 
 template <class ReturnContainerType,
@@ -67,15 +62,6 @@ struct transformer;
 
 template <>
 struct transformer<false> {
-  template <template <typename...> class ReturnContainerType,
-            typename... ReturnContainerArgs, typename T,
-            template <typename...> class InputContainerType,
-            typename... InputContainerArgs>
-  static ReturnContainerType<T, ReturnContainerArgs...>
-   transform_container(InputContainerType<T, InputContainerArgs...> c) {
-    return transform_container_given_input(
-     c, ReturnContainerType<T, ReturnContainerArgs...>());
-  }
   template <class ReturnContainerType,
             template <typename...> class InputContainerType, typename... InArgs,
             typename Func>
@@ -86,16 +72,6 @@ struct transformer<false> {
 
 template <>
 struct transformer<true> {
-  template <template <typename...> class ReturnContainerType,
-            typename... ReturnContainerArgs, typename T,
-            template <typename...> class InputContainerType,
-            typename... InputContainerArgs>
-  static ReturnContainerType<T, ReturnContainerArgs...>
-   transform_container(InputContainerType<T, InputContainerArgs...> c) {
-    ReturnContainerType<T, ReturnContainerArgs...> ret;
-    ret.reserve(c.size());
-    return transform_container_given_input(c, ret);
-  }
   template <class ReturnContainerType,
             template <typename...> class InputContainerType, typename... InArgs,
             typename Func>
@@ -105,9 +81,6 @@ struct transformer<true> {
     return map_given_input<ReturnContainerType>(c, f, ret);
   }
 };
-
-/* TODO: provide alias to each function so that user doesn't have to type out
-   transformer<true>:: each time */
 } /* utilities */
 } /* semantic_code_browser */
 

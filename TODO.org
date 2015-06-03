@@ -7,17 +7,18 @@
   :END:
 ** TODO basic output for c : mvp [1/6]
    DEADLINE: <2015-06-03 Wed>
-   - [X] basic [[frontend]]
-   - [ ] basic [[backend]] [0/3]
+   - [X] basic backend([[backend]])
+   - [ ] basic frontend ([[frontend]]) [0/3]
      - [ ] html per page
      - [ ] html per entity [0/2]
        - [ ] presentation for type
        - [ ] presentation for value
      - [ ] html glossary
-   - [-] types and variables [1/2]
+   - [-] types and variables [2/3]
      - [ ] make it work completely
      - [X] see [[index contents v1]].
-     - [ ] if a function is called, don't also call it a reference; pick one (probably just stick with ref tbh)
+     - [X] if a function is called, don't also call it a reference; pick one (probably just stick with ref tbh)
+       - disagree, see [[call vs reference]] below
    - [-] multiple files [1/2]
      - [X] dumps to csv
      - [ ] unclear how to show static linkage through "scope" paradigm
@@ -25,25 +26,27 @@
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well
    - [ ] conditional compilation support
-*** frontend
-simply take all cursors of importance (the ones whose types are mentioned in [[index contents v1]]) and stick them in a csv file. no change for multiple files.
 *** backend
+simply take all cursors of importance (the ones whose types are mentioned in [[index contents v1]]) and stick them in a csv file. no change for multiple files.
+*** frontend
 collate all csv files from frontend and produce html documentation
 
 DON'T do tooling yet; just use simple test cases. we will refactor the tooling in [[tooling]].
-** TODO adding c++ : testing plasticity, and adding objects [0/3]
+** TODO adding c++ : testing plasticity, and adding objects [0/4]
 This depends upon [[index contents v2]].
    - [ ] add struct/class member decls/refs
      - treat each one like its own variable maybe?
+   - [ ] determine if clang_getCursorReferenced() returns a "declaration" that's necessarily in the correct scope
+     - in the case of declaring a class's static member as "class::member name;", we don't know if that's what will show up (and of course, the semantic parent of that definition is the enclosing namespace, not class::)
    - [ ] add aliases [0/2]
      - [ ] typedefs
      - [ ] pointer/refs
        - super cool!
    - [ ] labels and gotos
-** TODO <<tooling>> make integration : easy tooling [0/3]
+** TODO make integration and related [[tooling]] [0/3]
    - [ ] remove requirement to include clang headers
    - [ ] integrate with make so that output is produced only upon change
-   - [ ] [[target specifiers]]
+   - [ ] target specifiers [[target specifiers]]
 *** target specifiers
 essentially specify different units to be compiled together into single binary file (the point of this is that all entities used are specified no more than once (sometimes less than once for entities loaded from a shared library, but that's not too worrisome)). a binary file can be a static library, dynamic library, or executable. obviously, the analogy is more difficult for interpreted languages, but can still be viewed similarly.
 
@@ -92,3 +95,13 @@ anonymous entities are actually somewhat annoying to resolve.
 
 *** notes
 c++ implicitly treats const namespace-scope variables as having internal (static) linkage, unlike c. this shouldn't be a problem for libclang, though.
+
+* general notes / design decisions
+** declaration vs definition
+i don't like the somewhat arbitrary demarcation between declaration and definition, especially because the concept of a mere "declaration" doesn't even exist in dynamic languages, and because a definition is, of course, also a declaration. the frontend can deal with that however it likes to, which works out just fine, i guess. it's just annoying.
+** frontend vs backend
+unlike most applications, the "backend" runs before the "frontend;" i'm denoting the backend to mean the part that actually parses the language and spits out csv, and the frontend the part that produces some usable output (html, org, etc). not a problem, i just had the two mixed up at first.
+** call vs reference
+we note that in c/c++, a reference (declrefexpr) occurs whenever a call occurs, at the exact same place. we're just going to log both for now and let the frontend deal with it.
+** on what the "scope" of a cursor
+the "scope" field will always refer to the scope of the actual cursor that is referenced (for example, if the line 'std::cout << "hello"' appears in main(), the scope of the reference to std::cout will be ::main@). a new field "ref_scope" is blank if the cursor isn't a reference or call to something, but contains the scope of the cursor that it refers to (in the given case, ::std::).
