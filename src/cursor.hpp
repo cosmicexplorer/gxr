@@ -94,12 +94,12 @@ struct cursor {
      below). this contains the lookup table for those cursor types. */
   static const std::unordered_map<CXCursorKind, std::string> ScopeKinds;
 
+  /* index contents */
   /* these are listed in the order they appear in the csv line, and also
      partially in the order they're initialized. i say "partially" because
      begin_file to end_col are initialized all at once in the body of the
      constructor, which occurs, temporally, after the base member
      initialization section */
-  /* index contents */
   /* may be different from end_file for entities which stretch across multiple
      files, which it technically allowed thanks to how low-level the #include
      directive is.....but i swear to god */

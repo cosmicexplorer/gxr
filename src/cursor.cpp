@@ -1,7 +1,9 @@
 /* std includes */
 #include <regex>
 #include <sstream>
-#include <iostream> /* todo: remove */
+#ifdef DEBUG
+#include <iostream>
+#endif
 /* external includes */
 #include <boost/algorithm/string/join.hpp>
 /* local includes */
@@ -56,7 +58,6 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
 }
 
 std::string cursor::setup_cursor_type(CXCursor c) {
-  /* TODO: see if this is ever called, and *isn't* also a declaration */
   if (clang_isCursorDefinition(c)) {
     return "definition";
   }
@@ -67,54 +68,49 @@ std::string cursor::setup_cursor_type(CXCursor c) {
   case CXCursor_VarDecl:
   case CXCursor_ParmDecl:
     return "declaration";
-    break;
   case CXCursor_TypeRef:
   case CXCursor_VariableRef:
   case CXCursor_DeclRefExpr:
     return "reference";
-    break;
-  /* TODO: flesh out the difference between "reference" and "call;" see which */
-  /* one is actually used (or if both are used) when a function is called, or if
-   */
-  /* CallExpr is ever used at all */
   case CXCursor_CallExpr:
     return "call";
-    break;
   default:
-    return ""; /* invalid result */
-    break;
+    return "";
   }
 }
 
 std::string cursor::setup_entity_spec(CXCursor c) {
+  /* macro expansion and macro instantion are the same enum, currently, so
+     switch yells if we try to case both of them; if that ever changes, let's
+     break the build  */
+  static_assert(CXCursor_MacroExpansion == CXCursor_MacroInstantiation,
+                "CXCursor_MacroExpansion should be equal to "
+                "CXCursor_MacroInstantiation; the libclang api has changed!");
   switch (clang_getCursorKind(c)) {
   case CXCursor_EnumDecl:
   case CXCursor_TypeRef:
     return "type";
-    break;
   case CXCursor_EnumConstantDecl:
   case CXCursor_VarDecl:
   case CXCursor_ParmDecl:
   case CXCursor_VariableRef:
-  /* TODO: i think CXCursor_DeclRefExpr is used for both calling functions and
-   */
-  /* referring to them. more processing is needed for this one */
   case CXCursor_DeclRefExpr:
     return "variable";
-    break;
   case CXCursor_CallExpr:
   case CXCursor_FunctionDecl:
     return "function";
-    break;
+  case CXCursor_MacroDefinition:
+  case CXCursor_MacroExpansion:
+    /* see above */
+    /* case CXCursor_MacroInstantiation: */
+    return "macro";
   default:
-    return ""; /* invalid result */
-    break;
+    return "";
   }
 }
 
 std::string cursor::setup_type(CXCursor c) {
-  /* returns empty string (invalid) if having a "type" doesn't make sense for
-   * the cursor */
+  /* returns empty string a "type" doesn't make sense for the cursor */
   return libclang_utils::GetStringAndDispose(
    clang_getTypeSpelling(clang_getCursorType(c)));
 }
@@ -174,11 +170,14 @@ const std::unordered_map<CXCursorKind, std::string> cursor::ScopeKinds{
  {CXCursor_FunctionDecl, "@"}};
 
 namespace {
-/* TODO: remove. here for debugging */
+#ifdef DEBUG
 static std::string output_scope_regex(std::string s) {
   std::cerr << s << std::endl;
   return s;
 }
+#else
+#define output_scope_regex(s) s
+#endif
 }
 
 const std::string cursor::IdentifierRegexString("[a-zA-Z_][a-zA-Z_0-9]*");
@@ -209,7 +208,7 @@ const std::unordered_set<std::string> cursor::CursorTypes{
  "declaration", "reference", "definition", "call"};
 
 const std::unordered_set<std::string> cursor::EntitySpecifiers{
- "type", "variable", "function"};
+ "type", "variable", "function", "macro"};
 
 /* this level of indirection is done so that we are assured of the validity of
    the compile-time choice of UntypedEntitySpecifiers, even if the actual
@@ -230,16 +229,18 @@ const std::unordered_set<std::string>
  cursor::UntypedEntitySpecifiers(create_untyped_entity_specifiers());
 
 bool cursor::isValid() {
+  using utilities::is_in_container;
+#ifdef DEBUG
   bool res = true;
   if (not isValidFilename(begin_file) or not isValidFilename(end_file)) {
     std::cerr << "invalid filename" << std::endl;
     res = false;
   }
-  if (not utilities::is_in_container(cursorType, CursorTypes)) {
+  if (not is_in_container(cursorType, CursorTypes)) {
     std::cerr << "invalid cursor type" << std::endl;
     res = false;
   }
-  if (not utilities::is_in_container(entitySpec, EntitySpecifiers)) {
+  if (not is_in_container(entitySpec, EntitySpecifiers)) {
     std::cerr << "invalid entity specifier" << std::endl;
     res = false;
   }
@@ -263,6 +264,13 @@ bool cursor::isValid() {
     std::cerr << "failed at " << toString() << std::endl;
   }
   return res;
+#else
+  return isValidFilename(begin_file) and isValidFilename(end_file) and
+         is_in_container(cursorType, CursorTypes) and
+         is_in_container(entitySpec, EntitySpecifiers) and isValidType(type) and
+         isValidIdentifier(name) and isValidScope(scope) and
+         isValidScope(ref_scope);
+#endif
 }
 
 std::string cursor::toString() {

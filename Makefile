@@ -1,3 +1,4 @@
+# DEFAULTS TO DEBUG CONFIGURATION
 .PHONY: all debug release clean check-c check-cpp check clean-check check-helper
 
 # note: if you run make with multiple targets at once, the compilation flags
@@ -15,7 +16,7 @@ ifeq ($(CXX), oops)
 $(error no suitable c++ compiler found! install $(CLANG_CXX) or $(GCC_CXX))
 endif
 
-CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0
+CXXFLAGS := -std=c++14 -Wall -Wextra -Werror -g -O0 -DDEBUG
 LDFLAGS := -lclang
 
 SRC_DIR := src
@@ -29,8 +30,9 @@ AST_DRIVER := walk-ast
 
 # release builds gotta go fast
 ifeq ($(MAKECMDGOALS),release)
-CXXFLAGS := -std=c++14 -Ofast
+CXXFLAGS := -std=c++14 -Ofast -DRELEASE
 endif
+
 
 all: $(AST_DRIVER)
 debug: all
@@ -52,18 +54,18 @@ TEST_C_OBJ := $(TEST_DIR)/outfile-c
 check: check-helper
 
 check-helper: clean-check
-	make check-c
+	@make check-c
 # check: check-c check-cpp
 
 DIAG_FILE := $(TEST_DIR)/diagnostics
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< > $@ 2>>$(DIAG_FILE)
+	time ./$(AST_DRIVER) $< > $@ 2>>$(DIAG_FILE)
 check-c: $(TEST_C_OBJ)
 	@echo "$(TEST_C_OBJ) has" $(shell wc -l "$(TEST_C_OBJ)" | \
-	grep -Po "^[0-9]+") "lines!"
+		grep -Po "^[0-9]+") "lines!"
 
 # $(TEST_CXX_OBJ): $(TEST_CXX) all
-# 	./$(AST_DRIVER) $< -std=c++14 > $@
+# 	time ./$(AST_DRIVER) $< > $@ 2>>$(DIAG_FILE)
 # check-cpp: $(TEST_CXX_OBJ)
 
 clean-check:
