@@ -211,6 +211,9 @@ const std::unordered_set<std::string> cursor::CursorTypes{
 const std::unordered_set<std::string> cursor::EntitySpecifiers{
  "type", "variable", "function"};
 
+/* this level of indirection is done so that we are assured of the validity of
+   the compile-time choice of UntypedEntitySpecifiers, even if the actual
+   checking must unfortunately be done at runtime (somewhat catastrophically) */
 namespace {
 static std::unordered_set<std::string> untyped_entity_specifiers_impl{"type"};
 static std::unordered_set<std::string> create_untyped_entity_specifiers() {

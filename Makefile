@@ -53,15 +53,12 @@ TEST_C_OBJ := $(TEST_DIR)/outfile-c
 check: check-c
 # check: check-c check-cpp
 
-# TODO: this shouldn't need to be here
-INCLUDE_ARG := -I/usr/lib/clang/3.6.0/include
-
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< $(INCLUDE_ARG) > $@
+	./$(AST_DRIVER) $< > $@
 check-c: $(TEST_C_OBJ)
 
 # $(TEST_CXX_OBJ): $(TEST_CXX) all
-# 	./$(AST_DRIVER) $< -std=c++14 $(INCLUDE_ARG) > $@
+# 	./$(AST_DRIVER) $< -std=c++14 > $@
 # check-cpp: $(TEST_CXX_OBJ)
 
 clean:
