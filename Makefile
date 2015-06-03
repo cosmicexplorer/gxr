@@ -1,5 +1,4 @@
-# RUNS DEBUG AS DEFAULT TARGET
-.PHONY: all debug release clean check-c check-cpp check
+.PHONY: all debug release clean check-c check-cpp check clean-check check-helper
 
 # note: if you run make with multiple targets at once, the compilation flags
 # will not be set correctly. this is because it is confusing and not wholely
@@ -50,19 +49,28 @@ TEST_C_OBJ := $(TEST_DIR)/outfile-c
 # TEST_CXX_OBJ := $(TEST_DIR)/outfile-cpp
 
 # just c for now; we'll add c++ support later
-check: check-c
+check: check-helper
+
+check-helper: clean-check
+	make check-c
 # check: check-c check-cpp
 
+DIAG_FILE := $(TEST_DIR)/diagnostics
 $(TEST_C_OBJ): $(TEST_C) all
-	./$(AST_DRIVER) $< > $@
+	./$(AST_DRIVER) $< > $@ 2>>$(DIAG_FILE)
 check-c: $(TEST_C_OBJ)
+	@echo "$(TEST_C_OBJ) has" $(shell wc -l "$(TEST_C_OBJ)" | \
+	grep -Po "^[0-9]+") "lines!"
 
 # $(TEST_CXX_OBJ): $(TEST_CXX) all
 # 	./$(AST_DRIVER) $< -std=c++14 > $@
 # check-cpp: $(TEST_CXX_OBJ)
 
-clean:
+clean-check:
+	@rm -f $(DIAG_FILE)
+	@rm -f $(TEST_C_OBJ)
+	@rm -f $(TEST_CXX_OBJ)
+
+clean: clean-check
 	@rm -f $(AST_DRIVER)
 	@rm -f $(AST_OBJ)
-	@rm -f $(TEST_C_OBJ)
-#	@rm -f $(TEST_CXX_OBJ)

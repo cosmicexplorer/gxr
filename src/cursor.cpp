@@ -10,7 +10,7 @@
 
 namespace semantic_code_browser {
 
-namespace frontend {
+namespace backend {
 
 namespace libclang_utils {
 
@@ -231,11 +231,7 @@ const std::unordered_set<std::string>
 
 bool cursor::isValid() {
   bool res = true;
-  if (begin_file != end_file) {
-    std::cerr << "file name mismatch" << std::endl;
-    res = false;
-  }
-  if (not isValidFilename(begin_file)) {
+  if (not isValidFilename(begin_file) or not isValidFilename(end_file)) {
     std::cerr << "invalid filename" << std::endl;
     res = false;
   }
@@ -259,6 +255,10 @@ bool cursor::isValid() {
     std::cerr << "invalid scope" << std::endl;
     res = false;
   }
+  if (not isValidScope(ref_scope)) {
+    std::cerr << "invalid ref scope" << std::endl;
+    res = false;
+  }
   if (not res) {
     std::cerr << "failed at " << toString() << std::endl;
   }
@@ -273,5 +273,5 @@ std::string cursor::toString() {
      << ',' << name << ',' << scope << "," << ref_scope;
   return ss.str();
 }
-} /* frontend */
+} /* backend */
 } /* semantic_code_browser */

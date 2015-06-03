@@ -57,7 +57,7 @@ int main(int argc, char ** argv) {
     clang_disposeDiagnostic(diag);
   }
   GlobalLambda = [&](CXCursor cur) {
-    using semantic_code_browser::frontend::cursor;
+    using semantic_code_browser::backend::cursor;
     cursor c(cur);
     if (c.isValid()) {
       std::cout << c.toString()

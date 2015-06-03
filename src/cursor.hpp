@@ -20,7 +20,7 @@ struct hash<CXCursorKind> {
 
 namespace semantic_code_browser {
 
-namespace frontend {
+namespace backend {
 
 struct ValidityError : public std::runtime_error {
   ValidityError(std::string s) : std::runtime_error(s) {
@@ -34,12 +34,10 @@ namespace libclang_utils {
 std::string GetStringAndDispose(CXString);
 } /* libclang_utils */
 
-/*
-  this class is not type-safe; it is meant to be easily serializable and
-  parseable through boost::spirit. a checker function is provided; use it when
-  required to ensure invalid values don't sneak into the strings used for
-  individual data members.
-*/
+/* this class is not type-safe; it is meant to be easily serializable and
+   parseable through boost::spirit. a checker function is provided; use it when
+   required to ensure invalid values don't sneak into the strings used for
+   individual data members. */
 struct cursor {
  private:
   /* creation of the cursor */
@@ -55,11 +53,9 @@ struct cursor {
              unsigned int, unsigned int, unsigned int> setupLocations(CXCursor);
 
   /* validity checking */
-  /*
-  types should be formatted according to a regex, but that's kinda difficult due
-  to the ambiguity available in type specifications in c/c++. right now it just
-  returns false if blank.
-  */
+  /* types should be formatted according to a regex, but that's kinda difficult
+  due to the ambiguity available in type specifications in c/c++. right now it
+  just returns false if blank. */
   bool isValidType(std::string);
   /* returns false if there are null characters */
   bool isValidFilename(std::string);
@@ -104,6 +100,9 @@ struct cursor {
      constructor, which occurs, temporally, after the base member
      initialization section */
   /* index contents */
+  /* may be different from end_file for entities which stretch across multiple
+     files, which it technically allowed thanks to how low-level the #include
+     directive is.....but i swear to god */
   std::string begin_file;
   /* libclang uses unsigned int for these; if it's good enough for them, it's
      good enough for us */
@@ -138,6 +137,6 @@ struct cursor {
      there) */
   std::string toString();
 }; /* cursor */
-} /* frontend */
+} /* backend */
 } /* semantic_code_browser */
 #endif /* CURSOR_HPP */
