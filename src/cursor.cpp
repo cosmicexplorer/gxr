@@ -31,7 +31,7 @@ namespace cursor_traits {} /* cursor_traits */
 
 std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
            unsigned int, unsigned int, unsigned int>
- cursor::setupLocations(CXCursor c) {
+ cursor::setup_locations(CXCursor c) {
   CXSourceRange range(clang_getCursorExtent(c));
   CXSourceLocation begin_loc(clang_getRangeStart(range));
   CXSourceLocation fin_loc(clang_getRangeEnd(range));
@@ -57,11 +57,20 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
    fin_offset + 1, fin_line, fin_col - 1);
 }
 
+/* macro expansion and macro instantion are the same enum, currently, so
+   switch yells if we try to case both of them; if that ever changes, let's
+   break the build  */
+#define ASSERT_EQUAL_ENUMS(x, y)                     \
+  static_assert(x == y, #x " should be equal to " #y \
+                           "; the libclang api has changed!");
+
 std::string cursor::setup_cursor_type(CXCursor c) {
+  ASSERT_EQUAL_ENUMS(CXCursor_MacroExpansion, CXCursor_MacroInstantiation);
+  const CXCursorKind k = clang_getCursorKind(c);
   if (clang_isCursorDefinition(c)) {
     return "definition";
   }
-  switch (clang_getCursorKind(c)) {
+  switch (k) {
   case CXCursor_EnumDecl:
   case CXCursor_EnumConstantDecl:
   case CXCursor_FunctionDecl:
@@ -71,21 +80,19 @@ std::string cursor::setup_cursor_type(CXCursor c) {
   case CXCursor_TypeRef:
   case CXCursor_VariableRef:
   case CXCursor_DeclRefExpr:
+  case CXCursor_MacroExpansion:
     return "reference";
   case CXCursor_CallExpr:
     return "call";
+  case CXCursor_MacroDefinition:
+    return "definition";
   default:
     return "";
   }
 }
 
 std::string cursor::setup_entity_spec(CXCursor c) {
-  /* macro expansion and macro instantion are the same enum, currently, so
-     switch yells if we try to case both of them; if that ever changes, let's
-     break the build  */
-  static_assert(CXCursor_MacroExpansion == CXCursor_MacroInstantiation,
-                "CXCursor_MacroExpansion should be equal to "
-                "CXCursor_MacroInstantiation; the libclang api has changed!");
+  ASSERT_EQUAL_ENUMS(CXCursor_MacroExpansion, CXCursor_MacroInstantiation);
   switch (clang_getCursorKind(c)) {
   case CXCursor_EnumDecl:
   case CXCursor_TypeRef:
@@ -101,8 +108,6 @@ std::string cursor::setup_entity_spec(CXCursor c) {
     return "function";
   case CXCursor_MacroDefinition:
   case CXCursor_MacroExpansion:
-    /* see above */
-    /* case CXCursor_MacroInstantiation: */
     return "macro";
   default:
     return "";
@@ -110,7 +115,7 @@ std::string cursor::setup_entity_spec(CXCursor c) {
 }
 
 std::string cursor::setup_type(CXCursor c) {
-  /* returns empty string a "type" doesn't make sense for the cursor */
+  /* returns empty string if a "type" doesn't make sense for the cursor */
   return libclang_utils::GetStringAndDispose(
    clang_getTypeSpelling(clang_getCursorType(c)));
 }
@@ -123,7 +128,11 @@ std::string cursor::setup_scope(CXCursor c) {
   using libclang_utils::GetStringAndDispose;
   std::string scope_str;
   if (clang_getCursorLinkage(c) == CXLinkage_Internal) {
-    scope_str = ">";
+    std::string beginfile, endfile;
+    unsigned int beginoff, endoff, beginline, endline, begincol, endcol;
+    std::tie(beginfile, beginoff, beginline, begincol, endfile, endoff, endline,
+             endcol) = setup_locations(c);
+    scope_str = beginfile + ">";
   }
   scope_str += "::";
   CXCursor tmp(c);
@@ -154,7 +163,7 @@ cursor::cursor(CXCursor c)
      scope(setup_scope(c)),
      ref_scope(setup_ref_scope(c)) {
   std::tie(begin_file, begin_offset, begin_line, begin_col, end_file,
-           end_offset, end_line, end_col) = setupLocations(c);
+           end_offset, end_line, end_col) = setup_locations(c);
 }
 
 bool cursor::isValidType(std::string type_arg) {
@@ -162,6 +171,8 @@ bool cursor::isValidType(std::string type_arg) {
          not type_arg.empty();
 }
 
+/* this allows empty strings, since most of the compiler-specific macros are
+   actually defined to be in a file with an empty string for a name */
 bool cursor::isValidFilename(std::string s) {
   return not utilities::is_in_container('\0', s);
 }
@@ -188,7 +199,7 @@ const std::regex cursor::IdentifierRegex(IdentifierRegexString,
 /* (filename>)?::(identifier::|identifier@)* */
 const std::regex cursor::ScopeRegex(
  output_scope_regex(
-  ">?::(" +
+  "([^\\0]*>)?::(" +
   boost::algorithm::join(
    utilities::transformer<true>::map<std::vector<std::string>>(
     ScopeKinds, [](auto p) { return IdentifierRegexString + p.second; }),
@@ -212,9 +223,13 @@ const std::unordered_set<std::string> cursor::EntitySpecifiers{
 
 /* this level of indirection is done so that we are assured of the validity of
    the compile-time choice of UntypedEntitySpecifiers, even if the actual
-   checking must unfortunately be done at runtime (somewhat catastrophically) */
+   checking must unfortunately be done at runtime (somewhat
+   catastrophically). this is better accomplished with a solution of variadic
+   templates and enums, but there's really no point in adding additional
+   complexity, so we use this hack instead */
 namespace {
-static std::unordered_set<std::string> untyped_entity_specifiers_impl{"type"};
+static std::unordered_set<std::string> untyped_entity_specifiers_impl{"type",
+                                                                      "macro"};
 static std::unordered_set<std::string> create_untyped_entity_specifiers() {
   if (utilities::is_subset(untyped_entity_specifiers_impl,
                            cursor::EntitySpecifiers)) {

@@ -47,10 +47,11 @@ struct cursor {
   static std::string setup_name(CXCursor);
   std::string setup_scope(CXCursor);
   std::string setup_ref_scope(CXCursor);
-  /* named differently because they're meant to be used inside the
-     constructor, after other elements have been setup already */
-  std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
-             unsigned int, unsigned int, unsigned int> setupLocations(CXCursor);
+  /* this is still used in the constructor, but run in the body, because it's
+     silly to run the same function six times for more theoretical purity */
+  static std::tuple<std::string, unsigned int, unsigned int, unsigned int,
+                    std::string, unsigned int, unsigned int, unsigned int>
+   setup_locations(CXCursor);
 
   /* validity checking */
   /* types should be formatted according to a regex, but that's kinda difficult
@@ -63,7 +64,7 @@ struct cursor {
   scopes are formatted according to the following regex:
   (or something like this, check its definition in cursor.cpp)
 
-  >?::(identifier::|identifier@)*
+  ([^\0]+>)?::(identifier::|identifier@)*
 
   where "filename" is a string identifying the file where the entity is located,
   if the entity has file-local (static) linkage, the side carat at the front is
@@ -117,6 +118,8 @@ struct cursor {
   std::string entitySpec;
   std::string type;
   std::string name;
+  /* note that these scopes DO NOT APPLY for preprocessor macros, since those
+     are independent of the ast! the frontend will deal with this */
   /* scope of current cursor */
   std::string scope;
   /* scope of referenced entity, undefined if cursor is not a reference */
