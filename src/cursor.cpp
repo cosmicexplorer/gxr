@@ -73,6 +73,16 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
            unsigned int, unsigned int, unsigned int>
  cursor::setup_locations(CXCursor c) {
   CXSourceRange range(clang_getCursorExtent(c));
+  /* CXToken * tokens = 0;
+     unsigned int nTokens = 0;
+     CXTranslationUnit tu(clang_Cursor_getTranslationUnit(c));
+     clang_tokenize(tu, range, &tokens, &nTokens);
+     std::cerr << "range: ";
+     for (size_t i = 0; i < nTokens; ++i) {
+     std::cerr << libclang_utils::GetStringAndDispose(clang_getTokenSpelling(
+     tu, tokens[i])) << (nTokens - 1 == i ? "" : " ");
+     }
+     std::cerr << std::endl; */
   CXSourceLocation begin_loc(clang_getRangeStart(range));
   CXSourceLocation fin_loc(clang_getRangeEnd(range));
   /* get beginning stats */

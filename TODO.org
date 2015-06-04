@@ -24,12 +24,17 @@
      - [X] dumps to csv
      - [X] unclear how to show static linkage through "scope" paradigm
        - no it's not lol
-   - [ ] preprocessor macros [0/3]
+   - [ ] preprocessor macros [0/2]
      - [ ] be able to read the final actual text
-     - [ ] be able to read all intermediate expansions as well
-       - so i'm pretty sure this is actually gonna use a similar process to conditional compilation support as well, because macros that reference other macros aren't getting expanded right now, and they need to be lol
-     - [ ] conditional compilation support
-       - this should be fun if done correctly
+     - [ ] implement temp file with macro refs and skipped lines
+       - do this by manually parsing preprocessing directives (lol lol lol) and:
+         1. putting the body of #define directives on the next line
+         2. removing #if/#ifndef/etc completely
+       - this *will* cause compilation failure (esp due to one definition rule for conditional compilation, as well as parsing macros without giving arguments), so we'll have to forgo the ability to *know* whether the program will compile correctly already. however, this is not too much of an issue.
+         - need to know whether, given compilation failure, the ast will still be parsed. maybe? let's try it.
+       - [ ] be able to read the references to other functions and whatnot contained within a preprocessor expansion
+       - [ ] conditional compilation support
+         - clang_getSkippedRanges makes this somewhat easy
 *** backend
 simply take all cursors of importance (the ones whose types are mentioned in [[index contents v1]]) and stick them in a csv file. no change for multiple files.
 *** frontend

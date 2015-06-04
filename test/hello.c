@@ -9,7 +9,7 @@ int __a() {
 */
 
 #define AAAA (__a())
-#define BBBB (AAAA + 3)
+#define BBBB (AAAA + AAAA)
 
 int ___a() {
   return BBBB;
@@ -54,7 +54,7 @@ int AAAAAA = 3;
 
 int main();
 
-int main() {
+int main(int argc, char ** argv) {
   /* int * F(a, ptr) = NULL; */
   int * F(a, ptr) = 0;
   aptr = &a;
@@ -62,5 +62,7 @@ int main() {
   b = _a();
 #undef A
   int c = A;
+  c = argc;
+  char ** res __attribute__((unused)) = argv;
   /* printf("%d\n", a); */
 }
