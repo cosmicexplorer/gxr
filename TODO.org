@@ -5,7 +5,7 @@
   :ORDERED:  t
   :COOKIE_DATA: todo recursive
   :END:
-** TODO basic output for c : mvp [3/6]
+** TODO basic output for c : mvp [3/5]
    DEADLINE: <2015-06-03 Wed>
    - [X] basic backend([[backend]])
    - [ ] basic frontend ([[frontend]]) [0/3]
@@ -23,11 +23,13 @@
    - [X] multiple files [2/2]
      - [X] dumps to csv
      - [X] unclear how to show static linkage through "scope" paradigm
-   - [ ] preprocessor macros [0/2]
+       - no it's not lol
+   - [ ] preprocessor macros [0/3]
      - [ ] be able to read the final actual text
      - [ ] be able to read all intermediate expansions as well
-   - [ ] conditional compilation support
-     - this should be fun if done correctly
+       - so i'm pretty sure this is actually gonna use a similar process to conditional compilation support as well, because macros that reference other macros aren't getting expanded right now, and they need to be lol
+     - [ ] conditional compilation support
+       - this should be fun if done correctly
 *** backend
 simply take all cursors of importance (the ones whose types are mentioned in [[index contents v1]]) and stick them in a csv file. no change for multiple files.
 *** frontend

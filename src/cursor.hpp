@@ -85,9 +85,11 @@ struct cursor {
 
  public:
   /* publicly available data */
-  static const std::regex ScopeRegex;
+  static const std::string FilenameRegexString;
+  static const std::regex FilenameRegex;
   static const std::string IdentifierRegexString;
   static const std::regex IdentifierRegex;
+  static const std::regex ScopeRegex;
   static const std::unordered_set<std::string> CursorTypes;
   static const std::unordered_set<std::string> EntitySpecifiers;
   static const std::unordered_set<std::string> UntypedEntitySpecifiers;

@@ -29,6 +29,46 @@ std::string GetStringAndDispose(CXString cxs) {
 
 namespace cursor_traits {} /* cursor_traits */
 
+/* this allows empty strings, since most of the compiler-specific macros are
+   actually defined to be in a file with an empty string for a name */
+const std::string cursor::FilenameRegexString("[^\\0]*");
+const std::regex cursor::FilenameRegex(FilenameRegexString,
+                                       std::regex_constants::extended);
+
+bool cursor::isValidFilename(std::string s) {
+  return std::regex_match(s, FilenameRegex);
+}
+
+const std::unordered_map<CXCursorKind, std::string> cursor::ScopeKinds{
+ {CXCursor_FunctionDecl, "@"}};
+
+namespace {
+#ifdef DEBUG
+static std::string output_scope_regex(std::string s) {
+  std::cerr << s << std::endl;
+  return s;
+}
+#else
+#define output_scope_regex(s) s
+#endif
+}
+
+const std::string cursor::IdentifierRegexString("[a-zA-Z_][a-zA-Z_0-9]*");
+
+const std::regex cursor::IdentifierRegex(IdentifierRegexString,
+                                         std::regex_constants::extended);
+
+/* (filename>)?::(identifier::|identifier@)* */
+const std::regex cursor::ScopeRegex(
+ output_scope_regex(
+  "(" + FilenameRegexString + ">)?::(" +
+  boost::algorithm::join(
+   utilities::transformer<true>::map<std::vector<std::string>>(
+    ScopeKinds, [](auto p) { return IdentifierRegexString + p.second; }),
+   "|") +
+  ")*"),
+ std::regex_constants::extended);
+
 std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
            unsigned int, unsigned int, unsigned int>
  cursor::setup_locations(CXCursor c) {
@@ -170,42 +210,6 @@ bool cursor::isValidType(std::string type_arg) {
   return utilities::is_in_container(entitySpec, UntypedEntitySpecifiers) or
          not type_arg.empty();
 }
-
-/* this allows empty strings, since most of the compiler-specific macros are
-   actually defined to be in a file with an empty string for a name */
-bool cursor::isValidFilename(std::string s) {
-  return not utilities::is_in_container('\0', s);
-}
-
-const std::unordered_map<CXCursorKind, std::string> cursor::ScopeKinds{
- {CXCursor_FunctionDecl, "@"}};
-
-namespace {
-#ifdef DEBUG
-static std::string output_scope_regex(std::string s) {
-  std::cerr << s << std::endl;
-  return s;
-}
-#else
-#define output_scope_regex(s) s
-#endif
-}
-
-const std::string cursor::IdentifierRegexString("[a-zA-Z_][a-zA-Z_0-9]*");
-
-const std::regex cursor::IdentifierRegex(IdentifierRegexString,
-                                         std::regex_constants::extended);
-
-/* (filename>)?::(identifier::|identifier@)* */
-const std::regex cursor::ScopeRegex(
- output_scope_regex(
-  "([^\\0]*>)?::(" +
-  boost::algorithm::join(
-   utilities::transformer<true>::map<std::vector<std::string>>(
-    ScopeKinds, [](auto p) { return IdentifierRegexString + p.second; }),
-   "|") +
-  ")*"),
- std::regex_constants::extended);
 
 bool cursor::isValidScope(std::string s) {
   return std::regex_match(s, ScopeRegex);
