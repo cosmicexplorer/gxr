@@ -106,6 +106,7 @@ struct cursor {
   /* may be different from end_file for entities which stretch across multiple
      files, which it technically allowed thanks to how low-level the #include
      directive is.....but i swear to god */
+  std::string scope;
   std::string begin_file;
   /* libclang uses unsigned int for these; if it's good enough for them, it's
      good enough for us */
@@ -123,8 +124,15 @@ struct cursor {
   /* note that these scopes DO NOT APPLY for preprocessor macros, since those
      are independent of the ast! the frontend will deal with this */
   /* scope of current cursor */
-  std::string scope;
-  /* scope of referenced entity, undefined if cursor is not a reference */
+  /* location again, but for the referenced entity */
+  std::string ref_beg_file;
+  unsigned int ref_beg_offset;
+  unsigned int ref_beg_line;
+  unsigned int ref_beg_col;
+  std::string ref_end_file;
+  unsigned int ref_end_offset;
+  unsigned int ref_end_line;
+  unsigned int ref_end_col;
   std::string ref_scope;
 
   cursor(CXCursor);

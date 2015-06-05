@@ -117,6 +117,16 @@ std::tuple<std::string, unsigned int, unsigned int, unsigned int, std::string,
 std::string cursor::setup_cursor_type(CXCursor c) {
   ASSERT_EQUAL_ENUMS(CXCursor_MacroExpansion, CXCursor_MacroInstantiation);
   const CXCursorKind k = clang_getCursorKind(c);
+  if (k == CXCursor_MacroExpansion) {
+    const CXCursor c2 = clang_getCursorReferenced(c);
+    if (clang_Cursor_isNull(c2)) {
+      std::cerr << "A:LKJSF" << std::endl;
+    } else {
+      std::cerr << "!!!" << std::endl;
+    }
+    /* tu = clang_Cursor_getTranslationUnit(c);
+       clang_tokenize */
+  }
   if (clang_isCursorDefinition(c)) {
     return "definition";
   }
@@ -206,14 +216,17 @@ std::string cursor::setup_ref_scope(CXCursor c) {
 }
 
 cursor::cursor(CXCursor c)
-   : cursorType(setup_cursor_type(c)),
+   : scope(setup_scope(c)),
+     cursorType(setup_cursor_type(c)),
      entitySpec(setup_entity_spec(c)),
      type(setup_type(c)),
      name(setup_name(c)),
-     scope(setup_scope(c)),
      ref_scope(setup_ref_scope(c)) {
   std::tie(begin_file, begin_offset, begin_line, begin_col, end_file,
            end_offset, end_line, end_col) = setup_locations(c);
+  std::tie(ref_beg_file, ref_beg_offset, ref_beg_line, ref_beg_col,
+           ref_end_file, ref_end_offset, ref_end_line, ref_end_col) =
+   setup_locations(clang_getCursorReferenced(c));
 }
 
 bool cursor::isValidType(std::string type_arg) {
@@ -285,6 +298,10 @@ bool cursor::isValid() {
     std::cerr << "invalid scope" << std::endl;
     res = false;
   }
+  if (not isValidFilename(ref_beg_file) or not isValidFilename(ref_end_file)) {
+    std::cout << "invalid referenced filename" << std::endl;
+    res = false;
+  }
   if (not isValidScope(ref_scope)) {
     std::cerr << "invalid ref scope" << std::endl;
     res = false;
@@ -298,16 +315,20 @@ bool cursor::isValid() {
          is_in_container(cursorType, CursorTypes) and
          is_in_container(entitySpec, EntitySpecifiers) and isValidType(type) and
          isValidIdentifier(name) and isValidScope(scope) and
+         isValidFilename(ref_beg_file) and isValidFilename(ref_end_file) and
          isValidScope(ref_scope);
 #endif
 }
 
 std::string cursor::toString() {
   std::stringstream ss;
-  ss << begin_file << ',' << begin_offset << ',' << begin_line << ','
-     << begin_col << ',' << end_file << ',' << end_offset << ',' << end_line
-     << ',' << end_col << ',' << cursorType << ',' << entitySpec << ',' << type
-     << ',' << name << ',' << scope << "," << ref_scope;
+  ss << scope << "," << begin_file << ',' << begin_offset << ',' << begin_line
+     << ',' << begin_col << ',' << end_file << ',' << end_offset << ','
+     << end_line << ',' << end_col << ',' << cursorType << ',' << entitySpec
+     << ',' << type << ',' << name << ',' << ref_beg_file << ","
+     << ref_beg_offset << "," << ref_beg_line << "," << ref_beg_col << ","
+     << ref_end_file << "," << ref_end_offset << "," << ref_end_line << ","
+     << ref_end_col << "," << ref_scope;
   return ss.str();
 }
 } /* backend */

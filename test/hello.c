@@ -54,6 +54,8 @@ int AAAAAA = 3;
 
 int main();
 
+#define A 3
+
 int main(int argc, char ** argv) {
   /* int * F(a, ptr) = NULL; */
   int * F(a, ptr) = 0;
