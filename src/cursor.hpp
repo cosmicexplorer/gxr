@@ -18,7 +18,7 @@ struct hash<CXCursorKind> {
 };
 }
 
-namespace semantic_code_browser {
+namespace gxr {
 
 namespace backend {
 
@@ -61,10 +61,10 @@ struct cursor {
   /* returns false if there are null characters */
   bool isValidFilename(std::string);
   /*
-  scopes are formatted according to the following regex:
-  (or something like this, check its definition in cursor.cpp)
+  scopes are represented according to the following regex:
+  (or something like this, check its current definition in cursor.cpp)
 
-  ([^\0]+>)?::(identifier::|identifier@)*
+  ([^\0]+>)?::(namespace::|class~|function@|...)*
 
   where "filename" is a string identifying the file where the entity is located,
   if the entity has file-local (static) linkage, the side carat at the front is
@@ -104,8 +104,8 @@ struct cursor {
      constructor, which occurs, temporally, after the base member
      initialization section */
   /* may be different from end_file for entities which stretch across multiple
-     files, which it technically allowed thanks to how low-level the #include
-     directive is.....but i swear to god */
+     files, which is technically allowed thanks to how low-level the #include
+     directive is */
   std::string scope;
   std::string begin_file;
   /* libclang uses unsigned int for these; if it's good enough for them, it's
@@ -151,5 +151,5 @@ struct cursor {
   std::string toString();
 }; /* cursor */
 } /* backend */
-} /* semantic_code_browser */
+} /* gxr */
 #endif /* CURSOR_HPP */

@@ -1,12 +1,7 @@
 #+TITLE: TODO
 
 * roadmap
-  :PROPERTIES:
-  :ORDERED:  t
-  :COOKIE_DATA: todo recursive
-  :END:
 ** TODO basic output for c : mvp [3/5]
-   DEADLINE: <2015-06-03 Wed>
    - [X] basic backend([[backend]])
    - [ ] basic frontend ([[frontend]]) [0/3]
      - [ ] html per page
@@ -24,8 +19,11 @@
      - [X] dumps to csv
      - [X] unclear how to show static linkage through "scope" paradigm
        - no it's not lol
-   - [ ] preprocessor macros [0/2]
+   - [ ] preprocessor macros [0/3]
+     - [ ] retool compp to do this
      - [ ] be able to read the final actual text
+     - [ ] be able to read any macros which are used in the definition of a given macro as well
+       - libclang does not support this
      - [ ] implement temp file with macro refs and skipped lines
        - do this by manually parsing preprocessing directives (lol lol lol) and:
          1. putting the body of #define directives on the next line

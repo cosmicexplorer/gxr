@@ -9,7 +9,7 @@
 /* local includes */
 #include "cursor.hpp" /* wrapper for libclang cursors */
 
-namespace scb = semantic_code_browser;
+namespace scb = gxr;
 
 class ArgumentError : public std::runtime_error {
  public:
@@ -57,7 +57,7 @@ int main(int argc, char ** argv) {
     clang_disposeDiagnostic(diag);
   }
   GlobalLambda = [&](CXCursor cur) {
-    using semantic_code_browser::backend::cursor;
+    using gxr::backend::cursor;
     cursor c(cur);
     if (c.isValid()) {
       std::cout << c.toString()

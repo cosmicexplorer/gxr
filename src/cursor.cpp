@@ -10,7 +10,7 @@
 #include "utilities.hpp"
 #include "cursor.hpp"
 
-namespace semantic_code_browser {
+namespace gxr {
 
 namespace backend {
 
@@ -58,7 +58,6 @@ const std::string cursor::IdentifierRegexString("[a-zA-Z_][a-zA-Z_0-9]*");
 const std::regex cursor::IdentifierRegex(IdentifierRegexString,
                                          std::regex_constants::extended);
 
-/* (filename>)?::(identifier::|identifier@)* */
 const std::regex cursor::ScopeRegex(
  output_scope_regex(
   "(" + FilenameRegexString + ">)?::(" +
@@ -332,4 +331,4 @@ std::string cursor::toString() {
   return ss.str();
 }
 } /* backend */
-} /* semantic_code_browser */
+} /* gxr */

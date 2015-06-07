@@ -14,7 +14,7 @@
   that's not super important.
 */
 
-namespace semantic_code_browser {
+namespace gxr {
 
 namespace utilities {
 
@@ -42,10 +42,8 @@ bool is_subset(ContainerA a, ContainerB b) {
   });
 }
 
-template <class ReturnContainerType,
-          template <typename...> class InputContainerType, typename... InArgs,
-          typename Func>
-ReturnContainerType map_given_input(InputContainerType<InArgs...> c, Func f,
+template <class ReturnContainerType, class InputContainerType, typename Func>
+ReturnContainerType map_given_input(InputContainerType c, Func f,
                                     ReturnContainerType out) {
   std::transform(std::begin(c), std::end(c), std::back_inserter(out), f);
   return out;
@@ -62,26 +60,22 @@ struct transformer;
 
 template <>
 struct transformer<false> {
-  template <class ReturnContainerType,
-            template <typename...> class InputContainerType, typename... InArgs,
-            typename Func>
-  static ReturnContainerType map(InputContainerType<InArgs...> c, Func f) {
+  template <class ReturnContainerType, class InputContainerType, typename Func>
+  static ReturnContainerType map(InputContainerType c, Func f) {
     return map_given_input<ReturnContainerType>(c, f, ReturnContainerType());
   }
 };
 
 template <>
 struct transformer<true> {
-  template <class ReturnContainerType,
-            template <typename...> class InputContainerType, typename... InArgs,
-            typename Func>
-  static ReturnContainerType map(InputContainerType<InArgs...> c, Func f) {
+  template <class ReturnContainerType, class InputContainerType, typename Func>
+  static ReturnContainerType map(InputContainerType c, Func f) {
     ReturnContainerType ret;
     ret.reserve(c.size());
     return map_given_input<ReturnContainerType>(c, f, ret);
   }
 };
 } /* utilities */
-} /* semantic_code_browser */
+} /* gxr */
 
 #endif /* UTILITIES_HPP */
