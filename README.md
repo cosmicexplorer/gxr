@@ -23,7 +23,7 @@ Hopefully you'll enjoy using it as much as I did writing it.
 
 # PROGRESS
 
-I would say "pre-alpha," except there's literally no functionality yet, so I can't even say that. Check out our [TODO](TODO.md) to see where we are and where we're going (phew, that's a lot of wheres).
+I would say "pre-alpha," except there's literally no functionality yet, so I can't even say that. Check out our [TODO](TODO.org) to see where we are and where we're going (phew, that's a lot of wheres).
 
 # INSTRUCTIONS
 
