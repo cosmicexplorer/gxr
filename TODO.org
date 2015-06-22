@@ -49,20 +49,30 @@ This depends upon [[index contents v2]].
 essentially specify different units to be compiled together into single binary file (the point of this is that all entities used are specified no more than once (sometimes less than once for entities loaded from a shared library, but that's not too worrisome)). a binary file can be a static library, dynamic library, or executable. obviously, the analogy is more difficult for interpreted languages, but can still be viewed similarly.
 
 there may be room for a separate tool, if required, which calculates dependencies of modules from dynamic languages on each other. this might require not just parsing the input, but also maintaining in memory some part of the runtime, so that we know where to refer python's system.stderr to, for example
-** icing on the cake [0/3]
+** icing on the cake [0/4]
    - [ ] integrate with doxygen/cldoc
      - http://reasonableapproximation.net/2015/01/16/keeping-code-and-docs-in-sync.html
    - [ ] org-mode
    - [ ] regex search
      - https://swtch.com/~rsc/regexp/regexp4.html
        - google code search explanation
-** expansion
-essentially, add other languages, hoping that the abstractions used before are generic enough
-   - [ ] python
-   - [ ] ruby
-   - [ ] java
-   - [ ] lisp
-   - etc
+   - [ ] create online repo of these projects
+     - have an option when creating the project to also share it online
+     - then read from config file, or have readline prompt (which dumps to config file), to determine project's name, etc
+     - would love to have github host this but since it's just static files i think i can stick on ec2 pretty easily
+** expansion [0/2]
+- [ ] add other languages, hoping that the abstractions used before are generic enough [0/4]
+  - [ ] python
+  - [ ] ruby
+  - [ ] java
+  - [ ] lisp
+  - etc
+- [ ] more detailed preprocessing/macro record [0/2]
+  - [ ] view full expansion of macro from a given usage in code
+    - also, view each increment of expansion of macro
+    - also view full expansion of macro definition
+    - this could be SUPER cool for lisp code i think
+  - [ ] view macro "scope"; which lines the macro takes effect and where it stops
 
 * indexing
 use other database to store results from files, then read from db. this allows for multiple-file support simply by joining the databases!
