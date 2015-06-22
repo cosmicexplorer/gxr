@@ -1,6 +1,12 @@
 gxr
 ===
 
+# :(
+
+This project isn't being worked on anymore. I've decided that there's no real benefit over [gnu global](https://www.gnu.org/software/global/), and if I wanted something more, I'd do better to hack on that than write it from scratch. So long, and thanks for all the fish!
+
+----
+
 Who likes coding? ("WE DO!!!" the crowd screams.)
 
 Who likes writing programs that do lots of cool things? ("WE DO!!!" The throng of coders intensifies.)
